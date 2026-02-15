@@ -1,4 +1,4 @@
-# AgriBridge AI – System Design Document
+# FarmIntel AI – System Design Document
 
 **Track:** AI for Rural Innovation & Sustainable Systems  
 **Program:** AI for Bharat Hackathon  
@@ -8,12 +8,12 @@
 
 ## Executive Summary
 
-AgriBridge AI is an offline-first agricultural intelligence platform designed to empower farmers in low-connectivity regions with real-time market price visibility, crop advisory, and direct buyer matching through voice, SMS, and mobile channels. The system uses a hybrid edge–cloud architecture leveraging AWS serverless infrastructure, foundation models, and on-device quantized AI models to ensure accessibility, scalability, and resilience. This design enables farmers to make data-driven selling and cultivation decisions while reducing dependence on intermediaries.
+FarmIntel AI is an offline-first agricultural intelligence platform designed to empower farmers in low-connectivity regions with real-time market price visibility, crop advisory, and direct buyer matching through voice, SMS, and mobile channels. The system uses a hybrid edge–cloud architecture leveraging AWS serverless infrastructure, foundation models, and on-device quantized AI models to ensure accessibility, scalability, and resilience. This design enables farmers to make data-driven selling and cultivation decisions while reducing dependence on intermediaries.
 
 
 ## Overview
 
-AgriBridge AI is an offline-first, multi-channel agricultural intelligence platform that enables farmers to access market prices, crop advisory, and buyer connections through voice (IVR), SMS, and mobile applications. The system uses a hybrid cloud-edge architecture where AWS cloud services provide AI intelligence and data synchronization, while quantized on-device models enable offline functionality.
+FarmIntel AI is an offline-first, multi-channel agricultural intelligence platform that enables farmers to access market prices, crop advisory, and buyer connections through voice (IVR), SMS, and mobile applications. The system uses a hybrid cloud-edge architecture where AWS cloud services provide AI intelligence and data synchronization, while quantized on-device models enable offline functionality.
 
 The platform leverages AWS Bedrock for conversational AI, implements Retrieval Augmented Generation (RAG) for knowledge-grounded responses, and uses vector search for semantic matching. The mobile application uses quantized small language models for offline inference, syncing with cloud services when connectivity is available.
 
@@ -1073,7 +1073,7 @@ interface ErrorResponse {
 
 ### Dual Testing Approach
 
-The AgriBridge AI platform requires both unit testing and property-based testing for comprehensive coverage:
+The FarmIntel AI platform requires both unit testing and property-based testing for comprehensive coverage:
 
 **Unit Tests**: Focus on specific examples, edge cases, and integration points
 - Example: Test that a specific SMS "PRICE WHEAT DELHI" returns expected format
@@ -1097,7 +1097,7 @@ The AgriBridge AI platform requires both unit testing and property-based testing
 **Property Test Tagging**:
 Each property test must include a comment tag referencing the design document:
 ```typescript
-// Feature: agribridge-ai-platform, Property 4: Geospatial Price Query
+// Feature: FarmIntel-ai-platform, Property 4: Geospatial Price Query
 // For any crop price query with a valid location, the system should return 
 // prices from the nearest mandis within 100km radius, ordered by distance
 ```
@@ -1316,4 +1316,4 @@ All infrastructure defined using AWS CDK or Terraform:
 
 ## Conclusion
 
-The AgriBridge AI platform provides a comprehensive, offline-first solution for connecting farmers with market intelligence and buyers. The architecture balances cloud-based AI capabilities with edge computing for offline scenarios, ensuring farmers in low-connectivity areas can access critical information. The use of property-based testing ensures system correctness across diverse inputs, while the multi-channel approach (IVR, SMS, mobile) ensures accessibility for farmers with varying levels of technology access and literacy.
+The FarmIntel AI platform provides a comprehensive, offline-first solution for connecting farmers with market intelligence and buyers. The architecture balances cloud-based AI capabilities with edge computing for offline scenarios, ensuring farmers in low-connectivity areas can access critical information. The use of property-based testing ensures system correctness across diverse inputs, while the multi-channel approach (IVR, SMS, mobile) ensures accessibility for farmers with varying levels of technology access and literacy.
