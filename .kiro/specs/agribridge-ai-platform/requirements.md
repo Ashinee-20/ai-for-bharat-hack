@@ -1,4 +1,4 @@
-# AgriBridge AI – Requirements Specification
+# FarmIntel AI – Requirements Specification
 
 **Track:** AI for Rural Innovation & Sustainable Systems  
 **Program:** AI for Bharat Hackathon  
@@ -12,15 +12,15 @@ Small and rural farmers often lack reliable internet connectivity and real-time 
 
 ## Objective
 
-The objective of AgriBridge AI is to create an offline-capable agricultural intelligence platform that enables farmers to access price information, advisory insights, and verified buyer networks through voice calls, SMS, and mobile applications.
+The objective of FarmIntel AI is to create an offline-capable agricultural intelligence platform that enables farmers to access price information, advisory insights, and verified buyer networks through voice calls, SMS, and mobile applications.
 
 ## Introduction
 
-AgriBridge AI is an offline-first AI-powered agricultural intelligence platform designed to help small and rural farmers access real-time crop market prices, demand insights, crop advisory, and direct buyer discovery even in low-connectivity environments. The platform provides multiple interaction channels including voice calls (IVR), SMS queries, and an offline mobile application, enabling farmers to make informed decisions about crop selling, pricing, and agricultural practices.
+FarmIntel AI is an offline-first AI-powered agricultural intelligence platform designed to help small and rural farmers access real-time crop market prices, demand insights, crop advisory, and direct buyer discovery even in low-connectivity environments. The platform provides multiple interaction channels including voice calls (IVR), SMS queries, and an offline mobile application, enabling farmers to make informed decisions about crop selling, pricing, and agricultural practices.
 
 ## Glossary
 
-- **Platform**: The AgriBridge AI system including all backend services, mobile applications, and telephony integrations
+- **Platform**: The FarmIntel AI system including all backend services, mobile applications, and telephony integrations
 - **Farmer**: End user who grows crops and uses the platform to access market intelligence and buyer connections
 - **Buyer**: Agricultural trader, dealer, or procurement agent seeking to purchase crops from farmers
 - **Mandi**: Traditional agricultural marketplace where crops are traded
