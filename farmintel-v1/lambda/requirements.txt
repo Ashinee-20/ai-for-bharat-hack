@@ -1,0 +1,14 @@
+# AWS SDK
+boto3==1.34.51
+
+# HTTP Requests
+requests==2.31.0
+
+# JSON handling (built-in, but explicit for clarity)
+# json - built-in
+
+# Date/Time handling (built-in)
+# datetime - built-in
+
+# No external paid services required!
+# Everything uses AWS Free Tier or free government APIs
