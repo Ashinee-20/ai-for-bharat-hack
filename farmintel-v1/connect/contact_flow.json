@@ -1,0 +1,196 @@
+{
+  "Version": "2019-10-30",
+  "StartAction": "welcome",
+  "Actions": [
+    {
+      "Identifier": "welcome",
+      "Type": "MessageParticipant",
+      "Parameters": {
+        "Text": "Welcome to FarmIntel AI. Press 1 for English, 2 for Hindi, 3 for Kannada."
+      },
+      "Transitions": {
+        "NextAction": "get_language",
+        "Errors": [],
+        "Conditions": []
+      }
+    },
+    {
+      "Identifier": "get_language",
+      "Type": "GetParticipantInput",
+      "Parameters": {
+        "Text": "Please select your language",
+        "MaxDigits": 1,
+        "Timeout": 5
+      },
+      "Transitions": {
+        "NextAction": "check_language",
+        "Errors": [
+          {
+            "NextAction": "welcome",
+            "ErrorType": "NoMatchingError"
+          }
+        ],
+        "Conditions": []
+      }
+    },
+    {
+      "Identifier": "check_language",
+      "Type": "Compare",
+      "Parameters": {
+        "ComparisonValue": "$.CustomerEndpoint.Address"
+      },
+      "Transitions": {
+        "NextAction": "main_menu",
+        "Errors": [],
+        "Conditions": [
+          {
+            "NextAction": "set_english",
+            "Condition": {
+              "Operator": "Equals",
+              "Operands": ["1"]
+            }
+          },
+          {
+            "NextAction": "set_hindi",
+            "Condition": {
+              "Operator": "Equals",
+              "Operands": ["2"]
+            }
+          },
+          {
+            "NextAction": "set_kannada",
+            "Condition": {
+              "Operator": "Equals",
+              "Operands": ["3"]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "Identifier": "main_menu",
+      "Type": "MessageParticipant",
+      "Parameters": {
+        "Text": "Press 1 for crop prices, Press 2 for selling insights, Press 3 to speak your query"
+      },
+      "Transitions": {
+        "NextAction": "get_menu_choice",
+        "Errors": [],
+        "Conditions": []
+      }
+    },
+    {
+      "Identifier": "get_menu_choice",
+      "Type": "GetParticipantInput",
+      "Parameters": {
+        "Text": "What would you like to know?",
+        "MaxDigits": 1,
+        "Timeout": 5
+      },
+      "Transitions": {
+        "NextAction": "route_query",
+        "Errors": [],
+        "Conditions": []
+      }
+    },
+    {
+      "Identifier": "route_query",
+      "Type": "InvokeLambdaFunction",
+      "Parameters": {
+        "LambdaFunctionARN": "arn:aws:lambda:REGION:ACCOUNT:function:IVRHandlerFunction",
+        "InvocationTimeLimitSeconds": 8,
+        "LambdaInvocationAttributes": {
+          "userInput": "$.StoredCustomerInput",
+          "language": "$.Attributes.language",
+          "menuChoice": "$.StoredCustomerInput"
+        }
+      },
+      "Transitions": {
+        "NextAction": "play_response",
+        "Errors": [
+          {
+            "NextAction": "error_message",
+            "ErrorType": "NoMatchingError"
+          }
+        ],
+        "Conditions": []
+      }
+    },
+    {
+      "Identifier": "play_response",
+      "Type": "MessageParticipant",
+      "Parameters": {
+        "Text": "$.External.response"
+      },
+      "Transitions": {
+        "NextAction": "ask_continue",
+        "Errors": [],
+        "Conditions": []
+      }
+    },
+    {
+      "Identifier": "ask_continue",
+      "Type": "GetParticipantInput",
+      "Parameters": {
+        "Text": "Press 1 to ask another question, Press 2 to end call",
+        "MaxDigits": 1,
+        "Timeout": 5
+      },
+      "Transitions": {
+        "NextAction": "check_continue",
+        "Errors": [],
+        "Conditions": []
+      }
+    },
+    {
+      "Identifier": "check_continue",
+      "Type": "Compare",
+      "Parameters": {
+        "ComparisonValue": "$.StoredCustomerInput"
+      },
+      "Transitions": {
+        "NextAction": "end_call",
+        "Errors": [],
+        "Conditions": [
+          {
+            "NextAction": "main_menu",
+            "Condition": {
+              "Operator": "Equals",
+              "Operands": ["1"]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "Identifier": "end_call",
+      "Type": "MessageParticipant",
+      "Parameters": {
+        "Text": "Thank you for using FarmIntel AI. Goodbye!"
+      },
+      "Transitions": {
+        "NextAction": "disconnect",
+        "Errors": [],
+        "Conditions": []
+      }
+    },
+    {
+      "Identifier": "disconnect",
+      "Type": "DisconnectParticipant",
+      "Parameters": {},
+      "Transitions": {}
+    },
+    {
+      "Identifier": "error_message",
+      "Type": "MessageParticipant",
+      "Parameters": {
+        "Text": "Sorry, we encountered an error. Please try again."
+      },
+      "Transitions": {
+        "NextAction": "main_menu",
+        "Errors": [],
+        "Conditions": []
+      }
+    }
+  ]
+}

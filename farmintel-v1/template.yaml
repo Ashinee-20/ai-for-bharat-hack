@@ -1,0 +1,114 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: FarmIntel AI V1 - Phone-based Agricultural Intelligence
+
+Globals:
+  Function:
+    Timeout: 30
+    Runtime: python3.11
+    MemorySize: 512
+    Environment:
+      Variables:
+        DYNAMODB_TABLE: !Ref PriceTable
+        BEDROCK_MODEL_ID: anthropic.claude-3-haiku-20240307-v1:0
+
+Resources:
+  # DynamoDB Table for Price Caching (FREE tier: 25GB)
+  PriceTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: farmintel-prices
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: pk
+          AttributeType: S
+        - AttributeName: sk
+          AttributeType: S
+      KeySchema:
+        - AttributeName: pk
+          KeyType: HASH
+        - AttributeName: sk
+          KeyType: RANGE
+      TimeToLiveSpecification:
+        AttributeName: ttl
+        Enabled: true
+
+  # Lambda Function for IVR Handler
+  IVRHandlerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: lambda/
+      Handler: ivr_handler.lambda_handler
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref PriceTable
+        - Statement:
+          - Effect: Allow
+            Action:
+              - bedrock:InvokeModel
+              - transcribe:StartStreamTranscription
+              - polly:SynthesizeSpeech
+            Resource: '*'
+      Events:
+        ConnectInvoke:
+          Type: Api
+          Properties:
+            Path: /ivr/handler
+            Method: post
+
+  # Lambda Function for Price Service
+  PriceServiceFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: lambda/
+      Handler: price_service.lambda_handler
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref PriceTable
+      Events:
+        GetPrices:
+          Type: Api
+          Properties:
+            Path: /api/prices/{crop}
+            Method: get
+        GetInsights:
+          Type: Api
+          Properties:
+            Path: /api/insights/{crop}
+            Method: get
+
+  # Lambda Function for LLM Service
+  LLMServiceFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: lambda/
+      Handler: llm_service.lambda_handler
+      Timeout: 60
+      Policies:
+        - Statement:
+          - Effect: Allow
+            Action:
+              - bedrock:InvokeModel
+            Resource: '*'
+
+  # CloudWatch Log Groups (FREE tier: 5GB)
+  IVRHandlerLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${IVRHandlerFunction}
+      RetentionInDays: 7
+
+  PriceServiceLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${PriceServiceFunction}
+      RetentionInDays: 7
+
+Outputs:
+  ApiEndpoint:
+    Description: API Gateway endpoint URL
+    Value: !Sub https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/
+  
+  PriceTableName:
+    Description: DynamoDB table name
+    Value: !Ref PriceTable
