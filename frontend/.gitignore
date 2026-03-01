@@ -1,0 +1,25 @@
+# Deployment scripts (not needed in repo)
+*.ps1
+*.bat
+
+# Temporary files
+*.tmp
+*.log
+*.json.bak
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Documentation (keep README.md only)
+DEPLOYMENT_*.md
+CLOUDFRONT_*.md
+FREE_DOMAIN_*.md

@@ -14,6 +14,18 @@ def lambda_handler(event, context):
     """
     Main handler for LLM queries
     """
+    # Handle OPTIONS request for CORS
+    if event.get('httpMethod') == 'OPTIONS':
+        return {
+            'statusCode': 200,
+            'headers': {
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Headers': 'Content-Type',
+                'Access-Control-Allow-Methods': 'POST,OPTIONS'
+            },
+            'body': ''
+        }
+    
     body = json.loads(event.get('body', '{}'))
     
     query = body.get('query', '')
@@ -23,6 +35,10 @@ def lambda_handler(event, context):
     if not query:
         return {
             'statusCode': 400,
+            'headers': {
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Headers': 'Content-Type'
+            },
             'body': json.dumps({'error': 'Query is required'})
         }
     
@@ -30,6 +46,11 @@ def lambda_handler(event, context):
     
     return {
         'statusCode': 200,
+        'headers': {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Headers': 'Content-Type',
+            'Access-Control-Allow-Methods': 'POST,OPTIONS'
+        },
         'body': json.dumps({
             'response': response,
             'model': BEDROCK_MODEL
