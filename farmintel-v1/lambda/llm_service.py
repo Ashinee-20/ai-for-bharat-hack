@@ -8,7 +8,7 @@ import boto3
 
 # Initialize boto3 client for Bedrock in us-east-1 (more models available)
 bedrock = boto3.client('bedrock-runtime', region_name='us-east-1')
-BEDROCK_MODEL = os.environ.get('BEDROCK_MODEL_ID', 'meta.llama3-8b-instruct-v1:0')
+BEDROCK_MODEL = os.environ.get('BEDROCK_MODEL_ID', 'us.amazon.nova-lite-v1:0')
 
 def lambda_handler(event, context):
     """

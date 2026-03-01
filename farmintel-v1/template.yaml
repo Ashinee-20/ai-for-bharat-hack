@@ -10,7 +10,7 @@ Globals:
     Environment:
       Variables:
         DYNAMODB_TABLE: !Ref PriceTable
-        BEDROCK_MODEL_ID: meta.llama3-8b-instruct-v1:0
+        BEDROCK_MODEL_ID: us.amazon.nova-lite-v1:0
 
 Resources:
   # DynamoDB Table for Price Caching (FREE tier: 25GB)
