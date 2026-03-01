@@ -1,0 +1,8 @@
+-r requirements.txt
+
+# LocalStack for local AWS emulation
+localstack==3.0.2
+awscli-local==0.22.0
+
+# Additional dev tools
+ipython==8.20.0

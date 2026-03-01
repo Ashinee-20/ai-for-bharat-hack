@@ -1,0 +1,57 @@
+version: '3.8'
+
+services:
+  localstack:
+    image: localstack/localstack:3.0
+    container_name: agribridge-localstack
+    ports:
+      - "4566:4566"            # LocalStack Gateway
+      - "4510-4559:4510-4559"  # External services port range
+    environment:
+      - SERVICES=dynamodb,s3,sns,lambda,apigateway,logs
+      - DEBUG=1
+      - DATA_DIR=/tmp/localstack/data
+      - LAMBDA_EXECUTOR=docker
+      - DOCKER_HOST=unix:///var/run/docker.sock
+    volumes:
+      - "./localstack-data:/tmp/localstack"
+      - "/var/run/docker.sock:/var/run/docker.sock"
+    networks:
+      - agribridge-network
+
+  postgres:
+    image: postgis/postgis:15-3.4
+    container_name: agribridge-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=agribridge
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - agribridge-network
+
+  opensearch:
+    image: opensearchproject/opensearch:2.11.0
+    container_name: agribridge-opensearch
+    ports:
+      - "9200:9200"
+      - "9600:9600"
+    environment:
+      - discovery.type=single-node
+      - OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m
+      - DISABLE_SECURITY_PLUGIN=true
+    volumes:
+      - opensearch-data:/usr/share/opensearch/data
+    networks:
+      - agribridge-network
+
+volumes:
+  postgres-data:
+  opensearch-data:
+
+networks:
+  agribridge-network:
+    driver: bridge
