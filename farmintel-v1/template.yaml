@@ -10,7 +10,7 @@ Globals:
     Environment:
       Variables:
         DYNAMODB_TABLE: !Ref PriceTable
-        BEDROCK_MODEL_ID: anthropic.claude-3-haiku-20240307-v1:0
+        BEDROCK_MODEL_ID: meta.llama3-8b-instruct-v1:0
 
 Resources:
   # DynamoDB Table for Price Caching (FREE tier: 25GB)
@@ -89,7 +89,15 @@ Resources:
           - Effect: Allow
             Action:
               - bedrock:InvokeModel
+              - aws-marketplace:ViewSubscriptions
+              - aws-marketplace:Subscribe
             Resource: '*'
+      Events:
+        QueryLLM:
+          Type: Api
+          Properties:
+            Path: /api/llm/query
+            Method: post
 
   # CloudWatch Log Groups (FREE tier: 5GB)
   IVRHandlerLogGroup:
