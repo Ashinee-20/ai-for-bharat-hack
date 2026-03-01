@@ -24,6 +24,18 @@ def lambda_handler(event, context):
     """
     path = event.get('path', '')
     
+    # Handle OPTIONS request for CORS
+    if event.get('httpMethod') == 'OPTIONS':
+        return {
+            'statusCode': 200,
+            'headers': {
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Headers': 'Content-Type',
+                'Access-Control-Allow-Methods': 'GET,POST,OPTIONS'
+            },
+            'body': ''
+        }
+    
     if '/prices/' in path:
         crop = event['pathParameters']['crop']
         return get_prices(crop)
@@ -33,6 +45,9 @@ def lambda_handler(event, context):
     
     return {
         'statusCode': 400,
+        'headers': {
+            'Access-Control-Allow-Origin': '*'
+        },
         'body': json.dumps({'error': 'Invalid endpoint'})
     }
 
@@ -45,10 +60,16 @@ def get_prices(crop):
     if cached_prices:
         return {
             'statusCode': 200,
+            'headers': {
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Headers': 'Content-Type',
+                'Access-Control-Allow-Methods': 'GET,OPTIONS'
+            },
             'body': json.dumps({
                 'crop': crop,
                 'prices': cached_prices,
-                'source': 'cache'
+                'count': len(cached_prices),
+                'cached': True
             }, default=str)
         }
     
@@ -61,15 +82,26 @@ def get_prices(crop):
         
         return {
             'statusCode': 200,
+            'headers': {
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Headers': 'Content-Type',
+                'Access-Control-Allow-Methods': 'GET,OPTIONS'
+            },
             'body': json.dumps({
                 'crop': crop,
                 'prices': prices,
-                'source': 'api'
+                'count': len(prices),
+                'cached': False
             }, default=str)
         }
     
     return {
         'statusCode': 404,
+        'headers': {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Headers': 'Content-Type',
+            'Access-Control-Allow-Methods': 'GET,OPTIONS'
+        },
         'body': json.dumps({'error': 'No price data found'})
     }
 
@@ -82,6 +114,11 @@ def get_insights(crop):
     if not prices:
         return {
             'statusCode': 404,
+            'headers': {
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Headers': 'Content-Type',
+                'Access-Control-Allow-Methods': 'GET,OPTIONS'
+            },
             'body': json.dumps({'error': 'No price data available'})
         }
     
@@ -90,6 +127,11 @@ def get_insights(crop):
     
     return {
         'statusCode': 200,
+        'headers': {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Headers': 'Content-Type',
+            'Access-Control-Allow-Methods': 'GET,OPTIONS'
+        },
         'body': json.dumps({
             'crop': crop,
             'insights': insights
