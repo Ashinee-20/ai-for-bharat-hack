@@ -53,3 +53,7 @@ Thumbs.db
 
 # Secrets
 secrets.json
+
+# Test files (optional - can commit if you want)
+test-bedrock.py
+test-*.bat
