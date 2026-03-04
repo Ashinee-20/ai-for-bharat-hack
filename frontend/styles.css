@@ -71,6 +71,9 @@ body {
 .header-content {
     max-width: 48rem;
     margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 
 .logo {
@@ -78,6 +81,30 @@ body {
     font-weight: 600;
     letter-spacing: -0.02em;
     color: var(--text-primary);
+}
+
+.clear-chat-button {
+    background: transparent;
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    border-radius: 8px;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.clear-chat-button:hover {
+    background: var(--hover-bg);
+    border-color: var(--text-primary);
+    color: var(--text-primary);
+}
+
+.clear-chat-button:active {
+    transform: scale(0.95);
 }
 
 /* Chat Container */

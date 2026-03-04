@@ -12,6 +12,12 @@ Globals:
         DYNAMODB_TABLE: !Ref PriceTable
         BEDROCK_MODEL_ID: us.amazon.nova-lite-v1:0
 
+  Api:
+    Cors:
+      AllowMethods: "'GET,POST,OPTIONS'"
+      AllowHeaders: "'Content-Type,Cache-Control,Pragma,Expires'"
+      AllowOrigin: "'*'"
+
 Resources:
   # DynamoDB Table for Price Caching (FREE tier: 25GB)
   PriceTable:
@@ -92,12 +98,16 @@ Resources:
               - aws-marketplace:ViewSubscriptions
               - aws-marketplace:Subscribe
             Resource: '*'
+          - Effect: Allow
+            Action:
+              - ssm:GetParameter
+            Resource: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/farmintel/groq-api-key'
       Events:
         QueryLLM:
           Type: Api
           Properties:
             Path: /api/llm/query
-            Method: post
+            Method: ANY
 
   # CloudWatch Log Groups (FREE tier: 5GB)
   IVRHandlerLogGroup:
