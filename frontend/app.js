@@ -100,95 +100,9 @@ async function handleSendMessage() {
 }
 
 async function processQuery(query) {
-    const queryLower = query.toLowerCase();
-    
-    // Check if asking about prices
-    if (queryLower.includes('price') || queryLower.includes('cost') || queryLower.includes('rate')) {
-        const crop = extractCropName(query);
-        return await getPriceInfo(crop);
-    }
-    
-    // Check if asking about selling/insights
-    if (queryLower.includes('sell') || queryLower.includes('when') || queryLower.includes('should') || queryLower.includes('trend')) {
-        const crop = extractCropName(query);
-        return await getInsights(crop);
-    }
-    
-    // Default: Use LLM API
+    // Let the LLM decide what to do - no more rule-based routing
+    // The backend LLM will fetch prices/insights if needed
     return await getLLMResponse(query);
-}
-
-async function getPriceInfo(crop) {
-    try {
-        const response = await fetch(`${API_BASE_URL}/api/prices/${crop}`);
-        const data = await response.json();
-        
-        if (data.prices && data.prices.length > 0) {
-            let message = `<p><strong>Current ${crop.toUpperCase()} Prices:</strong></p>`;
-            
-            data.prices.slice(0, 5).forEach(price => {
-                message += `<div class="price-card">`;
-                message += `<strong>${price.mandi}</strong><br>`;
-                message += `<span class="price">₹${price.price} per quintal</span>`;
-                if (price.state) message += `<br><span style="color: var(--text-secondary); font-size: 0.875rem;">${price.state}</span>`;
-                message += `</div>`;
-            });
-            
-            message += `<p style="color: var(--text-secondary); font-size: 0.875rem; margin-top: 1rem;">Showing top ${Math.min(5, data.prices.length)} of ${data.count} mandis</p>`;
-            
-            return message;
-        } else {
-            return `<p>Sorry, I couldn't find price information for ${crop}. Try: wheat, rice, tomato, potato, or onion.</p>`;
-        }
-    } catch (error) {
-        throw new Error('Failed to fetch price information');
-    }
-}
-
-async function getInsights(crop) {
-    try {
-        const response = await fetch(`${API_BASE_URL}/api/insights/${crop}`);
-        const data = await response.json();
-        
-        if (data.insights) {
-            const insights = data.insights;
-            let message = `<p><strong>${crop.toUpperCase()} Market Insights:</strong></p>`;
-            
-            // Recommendation
-            const recommendations = {
-                'SELL_NOW': '<strong>Recommendation: SELL NOW</strong><br><span style="color: var(--text-secondary);">Prices are falling. Sell immediately for best returns.</span>',
-                'WAIT': '<strong>Recommendation: WAIT</strong><br><span style="color: var(--text-secondary);">Prices are rising. Hold for better prices.</span>',
-                'SELL_WITHIN_WEEK': '<strong>Recommendation: SELL WITHIN WEEK</strong><br><span style="color: var(--text-secondary);">Prices are stable. Sell when convenient.</span>'
-            };
-            
-            message += `<div class="insight-card">`;
-            message += `<div class="recommendation">${recommendations[insights.recommendation] || insights.recommendation}</div>`;
-            
-            // Trend
-            message += `<div class="detail"><span class="detail-label">Trend:</span><span class="detail-value">${insights.trend}</span></div>`;
-            
-            // Best Price
-            message += `<div class="detail"><span class="detail-label">Best Price:</span><span class="detail-value">₹${insights.best_price} at ${insights.best_mandi}</span></div>`;
-            
-            // Average
-            if (insights.avg_price) {
-                message += `<div class="detail"><span class="detail-label">Average Price:</span><span class="detail-value">₹${insights.avg_price}</span></div>`;
-            }
-            
-            // Range
-            if (insights.price_range) {
-                message += `<div class="detail"><span class="detail-label">Price Range:</span><span class="detail-value">₹${insights.price_range.min} - ₹${insights.price_range.max}</span></div>`;
-            }
-            
-            message += `</div>`;
-            
-            return message;
-        } else {
-            return `<p>Sorry, I couldn't generate insights for ${crop}. Try: wheat, rice, tomato, potato, or onion.</p>`;
-        }
-    } catch (error) {
-        throw new Error('Failed to fetch insights');
-    }
 }
 
 async function getLLMResponse(query) {
@@ -214,34 +128,15 @@ async function getLLMResponse(query) {
         const data = await response.json();
         
         if (data.response) {
+            // Format the response - if it contains tables, keep them
             return `<p>${data.response}</p>`;
         } else {
-            // Fallback to general response
-            return `<p>I can help you with:</p>` +
-                   `<ul>` +
-                   `<li>Crop prices (e.g., "What is the price of wheat?")</li>` +
-                   `<li>Market insights (e.g., "Should I sell rice now?")</li>` +
-                   `<li>Selling recommendations</li>` +
-                   `</ul>` +
-                   `<p>What would you like to know?</p>`;
+            return `<p>I can help you with crop prices, market insights, and farming advice. What would you like to know?</p>`;
         }
     } catch (error) {
         console.error('LLM API Error:', error);
         throw new Error('Failed to get AI response');
     }
-}
-
-function extractCropName(text) {
-    const crops = ['wheat', 'rice', 'tomato', 'potato', 'onion', 'cotton', 'sugarcane'];
-    const textLower = text.toLowerCase();
-    
-    for (const crop of crops) {
-        if (textLower.includes(crop)) {
-            return crop;
-        }
-    }
-    
-    return 'wheat'; // default
 }
 
 function addMessage(content, type, isError = false) {

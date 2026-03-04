@@ -73,10 +73,14 @@ def lambda_handler(event, context):
             'statusCode': 400,
             'headers': {
                 'Access-Control-Allow-Origin': '*',
-                'Access-Control-Allow-Headers': 'Content-Type'
+                'Access-Control-Allow-Headers': 'Content-Type,Cache-Control,Pragma,Expires'
             },
             'body': json.dumps({'error': 'Query is required'})
         }
+    
+    # Auto-fetch price data if query mentions crops or prices
+    if not context_data or 'prices' not in context_data:
+        context_data = auto_fetch_context(query)
     
     response, model_used = generate_response(query, context_data, language)
     
@@ -93,12 +97,59 @@ def lambda_handler(event, context):
         })
     }
 
+def auto_fetch_context(query):
+    """
+    Use LLM to decide what data to fetch, then fetch it
+    """
+    query_lower = query.lower()
+    crops = ['wheat', 'rice', 'tomato', 'potato', 'onion', 'cotton', 'sugarcane']
+    
+    # Find which crop is mentioned
+    mentioned_crop = None
+    for crop in crops:
+        if crop in query_lower:
+            mentioned_crop = crop
+            break
+    
+    if not mentioned_crop:
+        return {}
+    
+    context = {'crop': mentioned_crop}
+    
+    # Determine what data is needed based on query keywords
+    needs_prices = any(word in query_lower for word in ['price', 'cost', 'rate', 'how much', 'rupee', '₹', 'mandi'])
+    needs_insights = any(word in query_lower for word in ['sell', 'should', 'when', 'best time', 'trend', 'recommendation', 'wait', 'now'])
+    
+    # Fetch prices if needed
+    if needs_prices:
+        try:
+            from price_service import get_prices
+            prices_data = get_prices(mentioned_crop)
+            if prices_data and 'prices' in prices_data:
+                context['prices'] = prices_data['prices'][:5]  # Top 5 prices
+                context['count'] = prices_data.get('count', 0)
+        except Exception as e:
+            print(f"Error fetching prices: {e}")
+    
+    # Fetch insights if needed
+    if needs_insights:
+        try:
+            from price_service import get_insights
+            insights_data = get_insights(mentioned_crop)
+            if insights_data and 'insights' in insights_data:
+                context['insights'] = insights_data['insights']
+        except Exception as e:
+            print(f"Error fetching insights: {e}")
+    
+    return context
+
 def generate_response(query, context_data, language='en'):
     """
-    Generate response using AWS Bedrock with Groq fallback
+    Generate response using Groq with AWS Bedrock fallback
+    LLM decides what to do based on available data
     """
-    # Build concise system prompt
-    system_prompt = """You are FarmIntel, an agricultural intelligence assistant for Indian farmers. 
+    # Build system prompt
+    system_prompt = """You are FarmIntel, an agricultural intelligence assistant for Indian farmers.
 
 Your expertise:
 - Crop prices and market trends
@@ -109,20 +160,41 @@ Your expertise:
 Rules:
 - ONLY answer farming and agriculture questions
 - If asked about non-farming topics, politely say: "I'm FarmIntel, specialized in agricultural intelligence. I can only help with farming, crop prices, and market insights. Please ask about agriculture."
-- If you don't know something, say: "I don't have information about that. I can help with crop prices, market trends, and selling recommendations."
-- Keep answers under 50 words
-- Be practical and helpful"""
+- When you have price data: Format it clearly and give practical advice
+- When you have insights data: Use the recommendation and trend to advise
+- When you don't have data: Say "I don't have current data for that"
+- Be specific with prices, mandis, and recommendations
+- Keep answers concise and practical"""
 
-    # Build minimal user prompt
-    user_prompt = f"Query: {query}\n"
+    # Build user prompt with all available context
+    user_prompt = f"User Query: {query}\n"
     
+    # Add price data if available
     if context_data and 'prices' in context_data:
-        prices = context_data['prices'][:2]  # Only use top 2 prices
-        user_prompt += f"Current prices: {prices}\n"
+        crop = context_data.get('crop', 'crop')
+        prices = context_data['prices']
+        user_prompt += f"\n📊 CURRENT {crop.upper()} PRICES (Fresh Data):\n"
+        user_prompt += "| Mandi | Price (₹/quintal) | State |\n"
+        user_prompt += "|-------|------------------|-------|\n"
+        for price in prices[:5]:
+            mandi = price.get('mandi', 'Unknown')
+            price_val = price.get('price', 0)
+            state = price.get('state', 'N/A')
+            user_prompt += f"| {mandi} | {price_val} | {state} |\n"
     
-    user_prompt += "\nAnswer:"
+    # Add insights data if available
+    if context_data and 'insights' in context_data:
+        insights = context_data['insights']
+        user_prompt += f"\n📈 MARKET INSIGHTS:\n"
+        user_prompt += f"Recommendation: {insights.get('recommendation', 'N/A')}\n"
+        user_prompt += f"Trend: {insights.get('trend', 'N/A')}\n"
+        user_prompt += f"Best Price: ₹{insights.get('best_price', 0)} at {insights.get('best_mandi', 'N/A')}\n"
+        if insights.get('avg_price'):
+            user_prompt += f"Average Price: ₹{insights['avg_price']}\n"
     
-    # Try Groq first (better limits, faster)
+    user_prompt += "\nProvide practical advice based on the data above:"
+    
+    # Try Groq first
     try:
         ai_response = call_groq(system_prompt, user_prompt)
         return ai_response, GROQ_MODEL
