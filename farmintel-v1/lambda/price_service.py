@@ -160,6 +160,42 @@ def get_from_cache(crop):
         print(f"Cache read error: {e}")
     
     return None
+def get_prices_data(crop):
+    """
+    Get current prices for a crop (returns data only, not HTTP response)
+    Used internally by LLM service
+    """
+    # Check cache first
+    cached_prices = get_from_cache(crop)
+    if cached_prices:
+        return cached_prices
+
+    # Fetch from Agmarknet API
+    prices = fetch_from_agmarknet(crop)
+
+    if prices:
+        # Cache for 24 hours
+        save_to_cache(crop, prices)
+        return prices
+
+    return None
+
+
+def get_insights_data(crop):
+    """
+    Get selling insights for a crop (returns data only, not HTTP response)
+    Used internally by LLM service
+    """
+    prices = get_from_cache(crop) or fetch_from_agmarknet(crop)
+
+    if not prices:
+        return None
+
+    # Calculate insights
+    insights = calculate_insights(prices)
+    return insights
+
+
 
 def save_to_cache(crop, prices):
     """
@@ -169,11 +205,25 @@ def save_to_cache(crop, prices):
         today = datetime.now().strftime('%Y-%m-%d')
         ttl = int((datetime.now() + timedelta(hours=24)).timestamp())
         
+        # Convert prices to use Decimal for DynamoDB
+        prices_decimal = []
+        for p in prices:
+            prices_decimal.append({
+                'mandi': p['mandi'],
+                'state': p['state'],
+                'district': p['district'],
+                'price': Decimal(str(p['price'])),
+                'min_price': Decimal(str(p['min_price'])),
+                'max_price': Decimal(str(p['max_price'])),
+                'date': p['date'],
+                'variety': p['variety']
+            })
+        
         table.put_item(
             Item={
                 'pk': f'PRICE#{crop.upper()}',
                 'sk': today,
-                'prices': prices,
+                'prices': prices_decimal,
                 'ttl': ttl,
                 'updated_at': datetime.now().isoformat()
             }
@@ -312,3 +362,43 @@ def calculate_insights(prices):
         'best_mandi': max(prices, key=lambda x: x['price'])['mandi'],
         'best_price': max(p['price'] for p in prices)
     }
+
+
+# ========================================
+# INTERNAL DATA FUNCTIONS (for LLM service)
+# ========================================
+
+def get_prices_data(crop):
+    """
+    Get current prices for a crop (returns data only, not HTTP response)
+    Used internally by LLM service
+    """
+    # Check cache first
+    cached_prices = get_from_cache(crop)
+    if cached_prices:
+        return cached_prices
+    
+    # Fetch from Agmarknet API
+    prices = fetch_from_agmarknet(crop)
+    
+    if prices:
+        # Cache for 24 hours
+        save_to_cache(crop, prices)
+        return prices
+    
+    return None
+
+
+def get_insights_data(crop):
+    """
+    Get selling insights for a crop (returns data only, not HTTP response)
+    Used internally by LLM service
+    """
+    prices = get_from_cache(crop) or fetch_from_agmarknet(crop)
+    
+    if not prices:
+        return None
+    
+    # Calculate insights
+    insights = calculate_insights(prices)
+    return insights

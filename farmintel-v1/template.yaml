@@ -62,7 +62,36 @@ Resources:
             Path: /ivr/handler
             Method: post
 
-  # Lambda Function for Price Service
+  # Lambda Function for LLM Service
+  LLMServiceFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: lambda/
+      Handler: llm_service.lambda_handler
+      Timeout: 60
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref PriceTable
+        - Statement:
+          - Effect: Allow
+            Action:
+              - bedrock:InvokeModel
+              - aws-marketplace:ViewSubscriptions
+              - aws-marketplace:Subscribe
+            Resource: '*'
+          - Effect: Allow
+            Action:
+              - ssm:GetParameter
+            Resource: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/farmintel/groq-api-key'
+      Events:
+        QueryLLM:
+          Type: Api
+          Properties:
+            Path: /api/llm/query
+            Method: ANY
+
+  # DEPRECATED: Price Service Function (kept for backward compatibility)
+  # This function is no longer used - all price/insights calls go through LLM Service
   PriceServiceFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -83,44 +112,8 @@ Resources:
             Path: /api/insights/{crop}
             Method: get
 
-  # Lambda Function for LLM Service
-  LLMServiceFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      CodeUri: lambda/
-      Handler: llm_service.lambda_handler
-      Timeout: 60
-      Policies:
-        - Statement:
-          - Effect: Allow
-            Action:
-              - bedrock:InvokeModel
-              - aws-marketplace:ViewSubscriptions
-              - aws-marketplace:Subscribe
-            Resource: '*'
-          - Effect: Allow
-            Action:
-              - ssm:GetParameter
-            Resource: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/farmintel/groq-api-key'
-      Events:
-        QueryLLM:
-          Type: Api
-          Properties:
-            Path: /api/llm/query
-            Method: ANY
-
-  # CloudWatch Log Groups (FREE tier: 5GB)
-  IVRHandlerLogGroup:
-    Type: AWS::Logs::LogGroup
-    Properties:
-      LogGroupName: !Sub /aws/lambda/${IVRHandlerFunction}
-      RetentionInDays: 7
-
-  PriceServiceLogGroup:
-    Type: AWS::Logs::LogGroup
-    Properties:
-      LogGroupName: !Sub /aws/lambda/${PriceServiceFunction}
-      RetentionInDays: 7
+  # CloudWatch Log Groups are auto-created by Lambda
+  # No need to explicitly define them
 
 Outputs:
   ApiEndpoint:

@@ -107,6 +107,9 @@ async function processQuery(query) {
 
 async function getLLMResponse(query) {
     try {
+        // Get conversation history for context
+        const conversationHistory = getConversationHistory();
+        
         const response = await fetch(`${API_BASE_URL}/api/llm/query?t=${Date.now()}`, {
             method: 'POST',
             headers: {
@@ -117,7 +120,8 @@ async function getLLMResponse(query) {
             },
             body: JSON.stringify({
                 query: query,
-                language: 'en'
+                language: 'en',
+                conversation_history: conversationHistory
             })
         });
         
@@ -128,7 +132,6 @@ async function getLLMResponse(query) {
         const data = await response.json();
         
         if (data.response) {
-            // Format the response - if it contains tables, keep them
             return `<p>${data.response}</p>`;
         } else {
             return `<p>I can help you with crop prices, market insights, and farming advice. What would you like to know?</p>`;
@@ -137,6 +140,26 @@ async function getLLMResponse(query) {
         console.error('LLM API Error:', error);
         throw new Error('Failed to get AI response');
     }
+}
+
+function getConversationHistory() {
+    try {
+        const saved = localStorage.getItem('farmIntelChat');
+        if (saved) {
+            const messages = JSON.parse(saved);
+            // Return last 5 messages for context (excluding error messages)
+            return messages
+                .filter(msg => !msg.content.includes('Sorry, I encountered an error'))
+                .slice(-5)
+                .map(msg => ({
+                    role: msg.type === 'user' ? 'user' : 'assistant',
+                    content: msg.content.replace(/<[^>]*>/g, '') // Strip HTML tags
+                }));
+        }
+    } catch (error) {
+        console.error('Error getting conversation history:', error);
+    }
+    return [];
 }
 
 function addMessage(content, type, isError = false) {

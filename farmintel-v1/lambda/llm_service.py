@@ -1,392 +1,355 @@
 """
-LLM Service - Groq Integration with AWS Bedrock Fallback
-Uses Groq Llama 3.3 70B (fast, high limits) for conversational AI
-Falls back to AWS Bedrock (Amazon Nova Lite) if Groq fails
+LLM Service with LLM Decision Router
+Groq primary + AWS Bedrock fallback
 """
+
 import json
 import os
 import boto3
 import urllib3
 
-# Initialize boto3 clients
-bedrock = boto3.client('bedrock-runtime', region_name='us-east-1')
-ssm = boto3.client('ssm', region_name='ap-south-1')  # Same region as Lambda
+# AWS clients
+bedrock = boto3.client("bedrock-runtime", region_name="us-east-1")
+ssm = boto3.client("ssm", region_name="ap-south-1")
 
-BEDROCK_MODEL = os.environ.get('BEDROCK_MODEL_ID', 'us.amazon.nova-lite-v1:0')
+# Models
+BEDROCK_MODEL = os.environ.get("BEDROCK_MODEL_ID", "us.amazon.nova-lite-v1:0")
+GROQ_MODEL = "llama-3.3-70b-versatile"
+GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
 
-# Groq configuration (fallback)
-GROQ_MODEL = 'llama-3.3-70b-versatile'
-GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions'
-
-# HTTP client for Groq API
 http = urllib3.PoolManager()
 
-# Cache for Groq API key
 _groq_api_key_cache = None
 
+
+# -------------------------------
+# API KEY FETCH
+# -------------------------------
 def get_groq_api_key():
-    """
-    Get Groq API key from Parameter Store (cached)
-    """
+
     global _groq_api_key_cache
-    
+
     if _groq_api_key_cache:
         return _groq_api_key_cache
-    
+
     try:
         response = ssm.get_parameter(
-            Name='/farmintel/groq-api-key',
+            Name="/farmintel/groq-api-key",
             WithDecryption=True
         )
-        _groq_api_key_cache = response['Parameter']['Value']
+        _groq_api_key_cache = response["Parameter"]["Value"]
         return _groq_api_key_cache
+
     except Exception as e:
-        print(f"Error fetching Groq API key from Parameter Store: {e}")
-        # Fallback to environment variable (for local testing)
-        return os.environ.get('GROQ_API_KEY', '')
+        print("SSM error:", e)
+        return os.environ.get("GROQ_API_KEY", "")
 
-def lambda_handler(event, context):
-    """
-    Main handler for LLM queries
-    """
-    # Handle OPTIONS request for CORS
-    if event.get('httpMethod') == 'OPTIONS':
-        return {
-            'statusCode': 200,
-            'headers': {
-                'Access-Control-Allow-Origin': '*',
-                'Access-Control-Allow-Headers': 'Content-Type,Cache-Control,Pragma,Expires',
-                'Access-Control-Allow-Methods': 'POST,OPTIONS',
-                'Access-Control-Max-Age': '86400'
-            },
-            'body': ''
-        }
-    
-    body = json.loads(event.get('body', '{}'))
-    
-    query = body.get('query', '')
-    context_data = body.get('context', {})
-    language = body.get('language', 'en')
-    
-    if not query:
-        return {
-            'statusCode': 400,
-            'headers': {
-                'Access-Control-Allow-Origin': '*',
-                'Access-Control-Allow-Headers': 'Content-Type,Cache-Control,Pragma,Expires'
-            },
-            'body': json.dumps({'error': 'Query is required'})
-        }
-    
-    # Auto-fetch price data if query mentions crops or prices
-    if not context_data or 'prices' not in context_data:
-        context_data = auto_fetch_context(query)
-    
-    response, model_used = generate_response(query, context_data, language)
-    
-    return {
-        'statusCode': 200,
-        'headers': {
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Headers': 'Content-Type,Cache-Control,Pragma,Expires',
-            'Access-Control-Allow-Methods': 'POST,OPTIONS'
-        },
-        'body': json.dumps({
-            'response': response,
-            'model': model_used
-        })
-    }
 
-def auto_fetch_context(query):
-    """
-    Use LLM to decide what data to fetch, then fetch it
-    """
-    query_lower = query.lower()
-    crops = ['wheat', 'rice', 'tomato', 'potato', 'onion', 'cotton', 'sugarcane']
-    
-    # Find which crop is mentioned
-    mentioned_crop = None
-    for crop in crops:
-        if crop in query_lower:
-            mentioned_crop = crop
-            break
-    
-    if not mentioned_crop:
-        return {}
-    
-    context = {'crop': mentioned_crop}
-    
-    # Determine what data is needed based on query keywords
-    needs_prices = any(word in query_lower for word in ['price', 'cost', 'rate', 'how much', 'rupee', '₹', 'mandi'])
-    needs_insights = any(word in query_lower for word in ['sell', 'should', 'when', 'best time', 'trend', 'recommendation', 'wait', 'now'])
-    
-    # Fetch prices if needed
-    if needs_prices:
-        try:
-            from price_service import get_prices
-            prices_data = get_prices(mentioned_crop)
-            if prices_data and 'prices' in prices_data:
-                context['prices'] = prices_data['prices'][:5]  # Top 5 prices
-                context['count'] = prices_data.get('count', 0)
-        except Exception as e:
-            print(f"Error fetching prices: {e}")
-    
-    # Fetch insights if needed
-    if needs_insights:
-        try:
-            from price_service import get_insights
-            insights_data = get_insights(mentioned_crop)
-            if insights_data and 'insights' in insights_data:
-                context['insights'] = insights_data['insights']
-        except Exception as e:
-            print(f"Error fetching insights: {e}")
-    
-    return context
+# -------------------------------
+# GROQ CALL
+# -------------------------------
+def call_groq(messages, max_tokens=150):
 
-def generate_response(query, context_data, language='en'):
-    """
-    Generate response using Groq with AWS Bedrock fallback
-    LLM decides what to do based on available data
-    """
-    # Build system prompt
-    system_prompt = """You are FarmIntel, an agricultural intelligence assistant for Indian farmers.
-
-Your expertise:
-- Crop prices and market trends
-- Selling recommendations
-- Best mandi prices
-- Agricultural advice
-
-Rules:
-- ONLY answer farming and agriculture questions
-- If asked about non-farming topics, politely say: "I'm FarmIntel, specialized in agricultural intelligence. I can only help with farming, crop prices, and market insights. Please ask about agriculture."
-- When you have price data: Format it clearly and give practical advice
-- When you have insights data: Use the recommendation and trend to advise
-- When you don't have data: Say "I don't have current data for that"
-- Be specific with prices, mandis, and recommendations
-- Keep answers concise and practical"""
-
-    # Build user prompt with all available context
-    user_prompt = f"User Query: {query}\n"
-    
-    # Add price data if available
-    if context_data and 'prices' in context_data:
-        crop = context_data.get('crop', 'crop')
-        prices = context_data['prices']
-        user_prompt += f"\n📊 CURRENT {crop.upper()} PRICES (Fresh Data):\n"
-        user_prompt += "| Mandi | Price (₹/quintal) | State |\n"
-        user_prompt += "|-------|------------------|-------|\n"
-        for price in prices[:5]:
-            mandi = price.get('mandi', 'Unknown')
-            price_val = price.get('price', 0)
-            state = price.get('state', 'N/A')
-            user_prompt += f"| {mandi} | {price_val} | {state} |\n"
-    
-    # Add insights data if available
-    if context_data and 'insights' in context_data:
-        insights = context_data['insights']
-        user_prompt += f"\n📈 MARKET INSIGHTS:\n"
-        user_prompt += f"Recommendation: {insights.get('recommendation', 'N/A')}\n"
-        user_prompt += f"Trend: {insights.get('trend', 'N/A')}\n"
-        user_prompt += f"Best Price: ₹{insights.get('best_price', 0)} at {insights.get('best_mandi', 'N/A')}\n"
-        if insights.get('avg_price'):
-            user_prompt += f"Average Price: ₹{insights['avg_price']}\n"
-    
-    user_prompt += "\nProvide practical advice based on the data above:"
-    
-    # Try Groq first
-    try:
-        ai_response = call_groq(system_prompt, user_prompt)
-        return ai_response, GROQ_MODEL
-    except Exception as e:
-        print(f"Groq API error: {e}")
-        print("Falling back to Bedrock...")
-        
-        # Fallback to AWS Bedrock
-        try:
-            ai_response = call_bedrock(system_prompt, user_prompt)
-            return ai_response, BEDROCK_MODEL
-        except Exception as bedrock_error:
-            print(f"Bedrock API error: {bedrock_error}")
-            return "I'm having trouble processing your request right now. Please try again.", "fallback"
-
-def call_bedrock(system_prompt, user_prompt):
-    """
-    Call AWS Bedrock API
-    """
-    # Check model type and use appropriate API format
-    if 'nova' in BEDROCK_MODEL.lower():
-        # Amazon Nova API format
-        response = bedrock.invoke_model(
-            modelId=BEDROCK_MODEL,
-            body=json.dumps({
-                "messages": [{
-                    "role": "user",
-                    "content": [{"text": f"{system_prompt}\n\n{user_prompt}"}]
-                }],
-                "inferenceConfig": {
-                    "max_new_tokens": 100,
-                    "temperature": 0.7
-                }
-            })
-        )
-        
-        result = json.loads(response['body'].read())
-        return result['output']['message']['content'][0]['text'].strip()
-        
-    elif 'llama' in BEDROCK_MODEL.lower():
-        # Meta Llama API format
-        response = bedrock.invoke_model(
-            modelId=BEDROCK_MODEL,
-            body=json.dumps({
-                "prompt": f"<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\n{system_prompt}<|eot_id|><|start_header_id|>user<|end_header_id|>\n\n{user_prompt}<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n",
-                "max_gen_len": 100,
-                "temperature": 0.7,
-                "top_p": 0.9
-            })
-        )
-        
-        result = json.loads(response['body'].read())
-        return result['generation'].strip()
-        
-    else:
-        # Claude API format (fallback)
-        response = bedrock.invoke_model(
-            modelId=BEDROCK_MODEL,
-            body=json.dumps({
-                "anthropic_version": "bedrock-2023-05-31",
-                "max_tokens": 100,
-                "system": system_prompt,
-                "messages": [{
-                    "role": "user",
-                    "content": user_prompt
-                }],
-                "temperature": 0.7
-            })
-        )
-        
-        result = json.loads(response['body'].read())
-        return result['content'][0]['text'].strip()
-
-def call_groq(system_prompt, user_prompt):
-    """
-    Call Groq API (fallback)
-    """
     groq_api_key = get_groq_api_key()
-    
+
     if not groq_api_key:
+        print("[ERROR] No Groq API key found")
         raise Exception("Groq API key not configured")
-    
+
     payload = {
         "model": GROQ_MODEL,
-        "messages": [
-            {
-                "role": "system",
-                "content": system_prompt
-            },
-            {
-                "role": "user",
-                "content": user_prompt
-            }
-        ],
-        "temperature": 0.7,
-        "max_tokens": 100,
-        "top_p": 1
+        "messages": messages,
+        "temperature": 0.3,
+        "max_tokens": max_tokens
     }
-    
+
+    print(f"[DEBUG] Calling Groq API with model: {GROQ_MODEL}")
     response = http.request(
-        'POST',
+        "POST",
         GROQ_API_URL,
         body=json.dumps(payload),
         headers={
-            'Authorization': f'Bearer {groq_api_key}',
-            'Content-Type': 'application/json'
+            "Authorization": f"Bearer {groq_api_key}",
+            "Content-Type": "application/json"
         }
     )
+
+    print(f"[DEBUG] Groq response status: {response.status}")
     
     if response.status != 200:
-        raise Exception(f"Groq API returned status {response.status}")
-    
-    result = json.loads(response.data.decode('utf-8'))
-    return result['choices'][0]['message']['content'].strip()
+        print(f"[ERROR] Groq API error {response.status}: {response.data.decode('utf-8')}")
+        raise Exception(f"Groq error {response.status}")
 
-def translate_response(text, target_language):
-    """
-    Translate response to target language using Bedrock
-    """
-    if target_language == 'en':
-        return text
-    
-    language_map = {
-        'hi': 'Hindi',
-        'kn': 'Kannada',
-        'ta': 'Tamil',
-        'te': 'Telugu'
-    }
-    
-    target_lang_name = language_map.get(target_language, 'Hindi')
-    
-    prompt = f"""Translate the following text to {target_lang_name}.
-Keep the same tone and meaning.
+    result = json.loads(response.data.decode("utf-8"))
+    return result["choices"][0]["message"]["content"]
 
-Text: {text}
 
-Translation:"""
+# -------------------------------
+# BEDROCK FALLBACK
+# -------------------------------
+def call_bedrock(system_prompt, user_prompt):
+
+    response = bedrock.invoke_model(
+        modelId=BEDROCK_MODEL,
+        body=json.dumps({
+            "messages": [{
+                "role": "user",
+                "content": [{"text": system_prompt + "\n\n" + user_prompt}]
+            }],
+            "inferenceConfig": {
+                "max_new_tokens": 150,
+                "temperature": 0.7
+            }
+        })
+    )
+
+    result = json.loads(response["body"].read())
+    return result["output"]["message"]["content"][0]["text"]
+
+
+# -------------------------------
+# ROUTER LLM
+# -------------------------------
+def llm_router(query, conversation_history=None):
+
+    history_context = ""
+    if conversation_history and len(conversation_history) > 0:
+        history_context = "Previous conversation:\n"
+        # Use last 5 messages for better context
+        for msg in conversation_history[-5:]:
+            role = msg.get("role", "user")
+            content = msg.get("content", "")
+            history_context += f"{role}: {content}\n"
+        history_context += "\n"
+
+    router_prompt = f"""
+You are a decision system for a farming AI.
+
+Decide if APIs must be called based on the user query and conversation context.
+
+Available APIs:
+
+1. prices_api - for price information
+2. insights_api - for market trends and selling recommendations
+
+Supported crops:
+wheat, rice, tomato, potato, onion, cotton, sugarcane
+
+{history_context}Current User Query:
+{query}
+
+Return ONLY valid JSON (no markdown, no code blocks):
+
+{{"crop": "wheat", "fetch_prices": true, "fetch_insights": false}}
+
+Rules:
+- If asking about price, cost, rate → fetch_prices
+- If asking about selling, trends, recommendations, best time → fetch_insights
+- If unrelated → both false
+- Consider previous context when interpreting ambiguous queries
+"""
+
+    messages = [
+        {"role": "system", "content": "Return ONLY valid JSON. No markdown. No code blocks."},
+        {"role": "user", "content": router_prompt}
+    ]
 
     try:
-        # Check model type and use appropriate API format
-        if 'nova' in BEDROCK_MODEL.lower():
-            # Amazon Nova API format
-            response = bedrock.invoke_model(
-                modelId=BEDROCK_MODEL,
-                body=json.dumps({
-                    "messages": [{
-                        "role": "user",
-                        "content": [{"text": prompt}]
-                    }],
-                    "inferenceConfig": {
-                        "max_new_tokens": 500,
-                        "temperature": 0.3
-                    }
-                })
-            )
-            
-            result = json.loads(response['body'].read())
-            translated = result['output']['message']['content'][0]['text'].strip()
-            
-        elif 'llama' in BEDROCK_MODEL.lower():
-            # Meta Llama API format
-            response = bedrock.invoke_model(
-                modelId=BEDROCK_MODEL,
-                body=json.dumps({
-                    "prompt": f"<|begin_of_text|><|start_header_id|>user<|end_header_id|>\n\n{prompt}<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n",
-                    "max_gen_len": 500,
-                    "temperature": 0.3,
-                    "top_p": 0.9
-                })
-            )
-            
-            result = json.loads(response['body'].read())
-            translated = result['generation'].strip()
-            
-        else:
-            # Claude API format (fallback)
-            response = bedrock.invoke_model(
-                modelId=BEDROCK_MODEL,
-                body=json.dumps({
-                    "anthropic_version": "bedrock-2023-05-31",
-                    "max_tokens": 500,
-                    "messages": [{
-                        "role": "user",
-                        "content": prompt
-                    }]
-                })
-            )
-            
-            result = json.loads(response['body'].read())
-            translated = result['content'][0]['text'].strip()
-        
-        return translated
+        print(f"[DEBUG] Calling Groq router for query: {query}")
+        decision_text = call_groq(messages, 80)
+        print(f"[DEBUG] Groq router response: {decision_text}")
+
+        # Extract JSON from markdown code blocks if present
+        if "```" in decision_text:
+            print(f"[DEBUG] Extracting JSON from markdown code blocks")
+            # Remove markdown code block markers
+            decision_text = decision_text.replace("```json", "").replace("```", "").strip()
+            print(f"[DEBUG] Cleaned response: {decision_text}")
+
+        decision = json.loads(decision_text)
+        print(f"[DEBUG] Parsed decision: {decision}")
+
+        return decision
+
+    except json.JSONDecodeError as je:
+        print(f"[ERROR] Router JSON decode error: {je}")
+        print(f"[ERROR] Raw response was: {decision_text}")
+        return {
+            "crop": None,
+            "fetch_prices": False,
+            "fetch_insights": False
+        }
     except Exception as e:
-        print(f"Translation error: {e}")
-        return text  # Return original if translation fails
+        print(f"[ERROR] Router error: {e}")
+        import traceback
+        traceback.print_exc()
+
+        return {
+            "crop": None,
+            "fetch_prices": False,
+            "fetch_insights": False
+        }
+
+
+# -------------------------------
+# CONTEXT FETCH
+# -------------------------------
+def build_context(query, conversation_history=None):
+
+    decision = llm_router(query, conversation_history)
+
+    crop = decision.get("crop")
+
+    print(f"[ROUTER DECISION] Query: {query}, Crop: {crop}, Fetch Prices: {decision.get('fetch_prices')}, Fetch Insights: {decision.get('fetch_insights')}")
+
+    if not crop:
+        return {}
+
+    context = {"crop": crop}
+
+    try:
+        print(f"[DEBUG] Attempting to import price_service functions...")
+        from price_service import get_prices_data
+        from price_service import get_insights_data
+        print(f"[DEBUG] Successfully imported price_service functions")
+
+        if decision.get("fetch_prices"):
+            print(f"[API CALL] Fetching prices for {crop}")
+            prices = get_prices_data(crop)
+
+            if prices:
+                print(f"[API RESULT] Got {len(prices)} price records for {crop}")
+                context["prices"] = prices[:5]
+            else:
+                print(f"[API RESULT] No prices returned for {crop}")
+
+        if decision.get("fetch_insights"):
+            print(f"[API CALL] Fetching insights for {crop}")
+            insights = get_insights_data(crop)
+
+            if insights:
+                print(f"[API RESULT] Got insights for {crop}: {insights.get('recommendation')}")
+                context["insights"] = insights
+            else:
+                print(f"[API RESULT] No insights returned for {crop}")
+
+    except ImportError as ie:
+        print(f"[ERROR] Import error: {ie}")
+        import traceback
+        traceback.print_exc()
+    except Exception as e:
+        print(f"[ERROR] Context fetch error: {e}")
+        import traceback
+        traceback.print_exc()
+
+    return context
+
+
+# -------------------------------
+# FINAL RESPONSE LLM
+# -------------------------------
+def generate_response(query, context, conversation_history=None):
+
+    system_prompt = """
+You are FarmIntel, an agricultural intelligence assistant.
+
+Help farmers with:
+- mandi prices (show as markdown table)
+- selling recommendations
+- crop market trends
+
+Give short practical answers. Format prices as a markdown table when showing multiple prices.
+"""
+
+    user_prompt = f"User question: {query}\n\n"
+
+    if "prices" in context:
+
+        user_prompt += "Current Prices (format as markdown table):\n"
+        user_prompt += "| Mandi | Price (₹) | State |\n"
+        user_prompt += "|-------|-----------|-------|\n"
+
+        for p in context["prices"]:
+            user_prompt += f"| {p['mandi']} | {p['price']} | {p['state']} |\n"
+
+    if "insights" in context:
+
+        ins = context["insights"]
+
+        user_prompt += "\nMarket Insight:\n"
+        user_prompt += f"- Recommendation: {ins.get('recommendation')}\n"
+        user_prompt += f"- Trend: {ins.get('trend')}\n"
+        user_prompt += f"- Best Mandi: {ins.get('best_mandi')}\n"
+        user_prompt += f"- Best Price: ₹{ins.get('best_price')}\n"
+
+    messages = [
+        {"role": "system", "content": system_prompt}
+    ]
+
+    # Add conversation history for context (last 5 messages)
+    if conversation_history:
+        for msg in conversation_history[-5:]:
+            messages.append({
+                "role": msg.get("role", "user"),
+                "content": msg.get("content", "")
+            })
+
+    messages.append({"role": "user", "content": user_prompt})
+
+    try:
+
+        return call_groq(messages)
+
+    except Exception as e:
+
+        print(f"[ERROR] Groq failure: {e}")
+
+        return call_bedrock(system_prompt, user_prompt)
+
+
+# -------------------------------
+# LAMBDA HANDLER
+# -------------------------------
+def lambda_handler(event, context):
+
+    if event.get("httpMethod") == "OPTIONS":
+
+        return {
+            "statusCode": 200,
+            "headers": {
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Headers": "*",
+                "Access-Control-Allow-Methods": "POST,OPTIONS"
+            },
+            "body": ""
+        }
+
+    body = json.loads(event.get("body", "{}"))
+
+    query = body.get("query", "")
+    conversation_history = body.get("conversation_history", [])
+
+    if not query:
+
+        return {
+            "statusCode": 400,
+            "headers": {"Access-Control-Allow-Origin": "*"},
+            "body": json.dumps({"error": "Query required"})
+        }
+
+    context_data = build_context(query, conversation_history)
+
+    answer = generate_response(query, context_data, conversation_history)
+
+    return {
+        "statusCode": 200,
+        "headers": {
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Headers": "*",
+            "Access-Control-Allow-Methods": "POST,OPTIONS"
+        },
+        "body": json.dumps({
+            "response": answer,
+            "context": context_data
+        })
+    }
