@@ -20,6 +20,25 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function initializeApp() {
+    // Check if we need to clear corrupted chat history
+    try {
+        const saved = localStorage.getItem('farmIntelChat');
+        if (saved) {
+            const messages = JSON.parse(saved);
+            // Check if there are error messages in history
+            const hasErrors = messages.some(msg => 
+                msg.content && msg.content.includes('Sorry, I encountered an error')
+            );
+            if (hasErrors) {
+                console.log('Clearing corrupted chat history...');
+                localStorage.removeItem('farmIntelChat');
+            }
+        }
+    } catch (error) {
+        console.error('Error checking chat history:', error);
+        localStorage.removeItem('farmIntelChat');
+    }
+    
     // Auto-resize textarea
     userInput.addEventListener('input', autoResizeTextarea);
     
@@ -33,6 +52,12 @@ function initializeApp() {
 function setupEventListeners() {
     // Send button click
     sendButton.addEventListener('click', handleSendMessage);
+    
+    // Clear chat button
+    const clearChatButton = document.getElementById('clearChatButton');
+    if (clearChatButton) {
+        clearChatButton.addEventListener('click', clearChatHistory);
+    }
     
     // Enter key to send (Shift+Enter for new line)
     userInput.addEventListener('keydown', (e) => {
@@ -168,10 +193,13 @@ async function getInsights(crop) {
 
 async function getLLMResponse(query) {
     try {
-        const response = await fetch(`${API_BASE_URL}/api/llm/query`, {
+        const response = await fetch(`${API_BASE_URL}/api/llm/query?t=${Date.now()}`, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'Cache-Control': 'no-cache, no-store, must-revalidate',
+                'Pragma': 'no-cache',
+                'Expires': '0'
             },
             body: JSON.stringify({
                 query: query,
@@ -179,9 +207,13 @@ async function getLLMResponse(query) {
             })
         });
         
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
         const data = await response.json();
         
-        if (data.response && !data.response.includes('trouble processing')) {
+        if (data.response) {
             return `<p>${data.response}</p>`;
         } else {
             // Fallback to general response
@@ -194,6 +226,7 @@ async function getLLMResponse(query) {
                    `<p>What would you like to know?</p>`;
         }
     } catch (error) {
+        console.error('LLM API Error:', error);
         throw new Error('Failed to get AI response');
     }
 }
@@ -301,6 +334,33 @@ function loadChatHistory() {
         }
     } catch (error) {
         console.error('Failed to load chat history:', error);
+    }
+}
+
+function clearChatHistory() {
+    if (confirm('Clear all chat history?')) {
+        // Clear localStorage
+        localStorage.removeItem('farmIntelChat');
+        
+        // Reset chat container to welcome message
+        chatContainer.innerHTML = `
+            <div class="message bot-message">
+                <div class="message-avatar">AI</div>
+                <div class="message-content">
+                    <p>Hello! I'm FarmIntel, your agricultural intelligence assistant.</p>
+                    <p>I can help you with:</p>
+                    <ul>
+                        <li>Real-time crop prices across Indian mandis</li>
+                        <li>Market trend analysis and insights</li>
+                        <li>Recommendations on when to sell your crops</li>
+                        <li>Best mandi prices for your produce</li>
+                    </ul>
+                    <p>Try asking: "What is the current price of wheat?"</p>
+                </div>
+            </div>
+        `;
+        
+        chatContainer.scrollTop = chatContainer.scrollHeight;
     }
 }
 

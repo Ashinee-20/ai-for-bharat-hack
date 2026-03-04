@@ -1,14 +1,49 @@
 """
-LLM Service - AWS Bedrock Integration
-Uses Amazon Nova Lite (free model) for conversational AI
+LLM Service - Groq Integration with AWS Bedrock Fallback
+Uses Groq Llama 3.3 70B (fast, high limits) for conversational AI
+Falls back to AWS Bedrock (Amazon Nova Lite) if Groq fails
 """
 import json
 import os
 import boto3
+import urllib3
 
-# Initialize boto3 client for Bedrock in us-east-1 (more models available)
+# Initialize boto3 clients
 bedrock = boto3.client('bedrock-runtime', region_name='us-east-1')
+ssm = boto3.client('ssm', region_name='ap-south-1')  # Same region as Lambda
+
 BEDROCK_MODEL = os.environ.get('BEDROCK_MODEL_ID', 'us.amazon.nova-lite-v1:0')
+
+# Groq configuration (fallback)
+GROQ_MODEL = 'llama-3.3-70b-versatile'
+GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions'
+
+# HTTP client for Groq API
+http = urllib3.PoolManager()
+
+# Cache for Groq API key
+_groq_api_key_cache = None
+
+def get_groq_api_key():
+    """
+    Get Groq API key from Parameter Store (cached)
+    """
+    global _groq_api_key_cache
+    
+    if _groq_api_key_cache:
+        return _groq_api_key_cache
+    
+    try:
+        response = ssm.get_parameter(
+            Name='/farmintel/groq-api-key',
+            WithDecryption=True
+        )
+        _groq_api_key_cache = response['Parameter']['Value']
+        return _groq_api_key_cache
+    except Exception as e:
+        print(f"Error fetching Groq API key from Parameter Store: {e}")
+        # Fallback to environment variable (for local testing)
+        return os.environ.get('GROQ_API_KEY', '')
 
 def lambda_handler(event, context):
     """
@@ -20,8 +55,9 @@ def lambda_handler(event, context):
             'statusCode': 200,
             'headers': {
                 'Access-Control-Allow-Origin': '*',
-                'Access-Control-Allow-Headers': 'Content-Type',
-                'Access-Control-Allow-Methods': 'POST,OPTIONS'
+                'Access-Control-Allow-Headers': 'Content-Type,Cache-Control,Pragma,Expires',
+                'Access-Control-Allow-Methods': 'POST,OPTIONS',
+                'Access-Control-Max-Age': '86400'
             },
             'body': ''
         }
@@ -42,96 +78,165 @@ def lambda_handler(event, context):
             'body': json.dumps({'error': 'Query is required'})
         }
     
-    response = generate_response(query, context_data, language)
+    response, model_used = generate_response(query, context_data, language)
     
     return {
         'statusCode': 200,
         'headers': {
             'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Headers': 'Content-Type',
+            'Access-Control-Allow-Headers': 'Content-Type,Cache-Control,Pragma,Expires',
             'Access-Control-Allow-Methods': 'POST,OPTIONS'
         },
         'body': json.dumps({
             'response': response,
-            'model': BEDROCK_MODEL
+            'model': model_used
         })
     }
 
 def generate_response(query, context_data, language='en'):
     """
-    Generate response using AWS Bedrock (supports Nova, Claude, Llama)
+    Generate response using AWS Bedrock with Groq fallback
     """
     # Build concise system prompt
-    system_prompt = """You are a farming advisor. Give brief, practical advice about crop prices and selling."""
+    system_prompt = """You are FarmIntel, an agricultural intelligence assistant for Indian farmers. 
+
+Your expertise:
+- Crop prices and market trends
+- Selling recommendations
+- Best mandi prices
+- Agricultural advice
+
+Rules:
+- ONLY answer farming and agriculture questions
+- If asked about non-farming topics, politely say: "I'm FarmIntel, specialized in agricultural intelligence. I can only help with farming, crop prices, and market insights. Please ask about agriculture."
+- If you don't know something, say: "I don't have information about that. I can help with crop prices, market trends, and selling recommendations."
+- Keep answers under 50 words
+- Be practical and helpful"""
 
     # Build minimal user prompt
     user_prompt = f"Query: {query}\n"
     
     if context_data and 'prices' in context_data:
         prices = context_data['prices'][:2]  # Only use top 2 prices
-        user_prompt += f"Prices: {prices}\n"
+        user_prompt += f"Current prices: {prices}\n"
     
-    user_prompt += "Answer in under 50 words."
+    user_prompt += "\nAnswer:"
     
+    # Try Groq first (better limits, faster)
     try:
-        # Check model type and use appropriate API format
-        if 'nova' in BEDROCK_MODEL.lower():
-            # Amazon Nova API format
-            response = bedrock.invoke_model(
-                modelId=BEDROCK_MODEL,
-                body=json.dumps({
-                    "messages": [{
-                        "role": "user",
-                        "content": [{"text": f"{system_prompt}\n\n{user_prompt}"}]
-                    }],
-                    "inferenceConfig": {
-                        "max_new_tokens": 100,
-                        "temperature": 0.7
-                    }
-                })
-            )
-            
-            result = json.loads(response['body'].read())
-            ai_response = result['output']['message']['content'][0]['text'].strip()
-            
-        elif 'llama' in BEDROCK_MODEL.lower():
-            # Meta Llama API format
-            response = bedrock.invoke_model(
-                modelId=BEDROCK_MODEL,
-                body=json.dumps({
-                    "prompt": f"<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\n{system_prompt}<|eot_id|><|start_header_id|>user<|end_header_id|>\n\n{user_prompt}<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n",
-                    "max_gen_len": 100,
-                    "temperature": 0.7,
-                    "top_p": 0.9
-                })
-            )
-            
-            result = json.loads(response['body'].read())
-            ai_response = result['generation'].strip()
-            
-        else:
-            # Claude API format (fallback)
-            response = bedrock.invoke_model(
-                modelId=BEDROCK_MODEL,
-                body=json.dumps({
-                    "anthropic_version": "bedrock-2023-05-31",
-                    "max_tokens": 100,
-                    "system": system_prompt,
-                    "messages": [{
-                        "role": "user",
-                        "content": user_prompt
-                    }],
-                    "temperature": 0.7
-                })
-            )
-            
-            result = json.loads(response['body'].read())
-            ai_response = result['content'][0]['text'].strip()
-        
-        return ai_response
+        ai_response = call_groq(system_prompt, user_prompt)
+        return ai_response, GROQ_MODEL
     except Exception as e:
-        print(f"Bedrock API error: {e}")
-        return "I'm having trouble processing your request right now. Please try again."
+        print(f"Groq API error: {e}")
+        print("Falling back to Bedrock...")
+        
+        # Fallback to AWS Bedrock
+        try:
+            ai_response = call_bedrock(system_prompt, user_prompt)
+            return ai_response, BEDROCK_MODEL
+        except Exception as bedrock_error:
+            print(f"Bedrock API error: {bedrock_error}")
+            return "I'm having trouble processing your request right now. Please try again.", "fallback"
+
+def call_bedrock(system_prompt, user_prompt):
+    """
+    Call AWS Bedrock API
+    """
+    # Check model type and use appropriate API format
+    if 'nova' in BEDROCK_MODEL.lower():
+        # Amazon Nova API format
+        response = bedrock.invoke_model(
+            modelId=BEDROCK_MODEL,
+            body=json.dumps({
+                "messages": [{
+                    "role": "user",
+                    "content": [{"text": f"{system_prompt}\n\n{user_prompt}"}]
+                }],
+                "inferenceConfig": {
+                    "max_new_tokens": 100,
+                    "temperature": 0.7
+                }
+            })
+        )
+        
+        result = json.loads(response['body'].read())
+        return result['output']['message']['content'][0]['text'].strip()
+        
+    elif 'llama' in BEDROCK_MODEL.lower():
+        # Meta Llama API format
+        response = bedrock.invoke_model(
+            modelId=BEDROCK_MODEL,
+            body=json.dumps({
+                "prompt": f"<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\n{system_prompt}<|eot_id|><|start_header_id|>user<|end_header_id|>\n\n{user_prompt}<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n",
+                "max_gen_len": 100,
+                "temperature": 0.7,
+                "top_p": 0.9
+            })
+        )
+        
+        result = json.loads(response['body'].read())
+        return result['generation'].strip()
+        
+    else:
+        # Claude API format (fallback)
+        response = bedrock.invoke_model(
+            modelId=BEDROCK_MODEL,
+            body=json.dumps({
+                "anthropic_version": "bedrock-2023-05-31",
+                "max_tokens": 100,
+                "system": system_prompt,
+                "messages": [{
+                    "role": "user",
+                    "content": user_prompt
+                }],
+                "temperature": 0.7
+            })
+        )
+        
+        result = json.loads(response['body'].read())
+        return result['content'][0]['text'].strip()
+
+def call_groq(system_prompt, user_prompt):
+    """
+    Call Groq API (fallback)
+    """
+    groq_api_key = get_groq_api_key()
+    
+    if not groq_api_key:
+        raise Exception("Groq API key not configured")
+    
+    payload = {
+        "model": GROQ_MODEL,
+        "messages": [
+            {
+                "role": "system",
+                "content": system_prompt
+            },
+            {
+                "role": "user",
+                "content": user_prompt
+            }
+        ],
+        "temperature": 0.7,
+        "max_tokens": 100,
+        "top_p": 1
+    }
+    
+    response = http.request(
+        'POST',
+        GROQ_API_URL,
+        body=json.dumps(payload),
+        headers={
+            'Authorization': f'Bearer {groq_api_key}',
+            'Content-Type': 'application/json'
+        }
+    )
+    
+    if response.status != 200:
+        raise Exception(f"Groq API returned status {response.status}")
+    
+    result = json.loads(response.data.decode('utf-8'))
+    return result['choices'][0]['message']['content'].strip()
 
 def translate_response(text, target_language):
     """
