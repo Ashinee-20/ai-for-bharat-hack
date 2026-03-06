@@ -330,15 +330,18 @@ def calculate_insights(prices):
             'confidence': 0
         }
     
+    # Convert Decimal to float for calculations
+    price_values = [float(p['price']) for p in prices]
+    
     # Calculate average price
-    avg_price = sum(p['price'] for p in prices) / len(prices)
+    avg_price = sum(price_values) / len(price_values)
     
     # Calculate price volatility
-    price_range = max(p['price'] for p in prices) - min(p['price'] for p in prices)
+    price_range = max(price_values) - min(price_values)
     volatility = (price_range / avg_price) * 100 if avg_price > 0 else 0
     
     # Simple trend analysis
-    recent_prices = [p['price'] for p in prices[:3]]
+    recent_prices = price_values[:3]
     if len(recent_prices) >= 2:
         if recent_prices[0] > recent_prices[-1] * 1.05:
             trend = 'RISING'
@@ -359,8 +362,8 @@ def calculate_insights(prices):
         'avg_price': round(avg_price, 2),
         'volatility': round(volatility, 2),
         'confidence': 75,
-        'best_mandi': max(prices, key=lambda x: x['price'])['mandi'],
-        'best_price': max(p['price'] for p in prices)
+        'best_mandi': max(prices, key=lambda x: float(x['price']))['mandi'],
+        'best_price': float(max(price_values))
     }
 
 

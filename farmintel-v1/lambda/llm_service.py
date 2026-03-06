@@ -219,7 +219,20 @@ def build_context(query, conversation_history=None):
 
             if prices:
                 print(f"[API RESULT] Got {len(prices)} price records for {crop}")
-                context["prices"] = prices[:5]
+                # Convert Decimal to float for JSON serialization
+                prices_converted = []
+                for p in prices[:5]:
+                    prices_converted.append({
+                        'mandi': p['mandi'],
+                        'state': p['state'],
+                        'district': p['district'],
+                        'price': float(p['price']),
+                        'min_price': float(p['min_price']),
+                        'max_price': float(p['max_price']),
+                        'date': p['date'],
+                        'variety': p['variety']
+                    })
+                context["prices"] = prices_converted
             else:
                 print(f"[API RESULT] No prices returned for {crop}")
 
