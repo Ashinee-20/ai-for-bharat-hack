@@ -132,7 +132,9 @@ async function getLLMResponse(query) {
         const data = await response.json();
         
         if (data.response) {
-            return `<p>${data.response}</p>`;
+            // Parse markdown in response
+            const formattedResponse = parseMarkdown(data.response);
+            return `<div>${formattedResponse}</div>`;
         } else {
             return `<p>I can help you with crop prices, market insights, and farming advice. What would you like to know?</p>`;
         }
@@ -140,6 +142,77 @@ async function getLLMResponse(query) {
         console.error('LLM API Error:', error);
         throw new Error('Failed to get AI response');
     }
+}
+
+// Simple Markdown Parser for tables and formatting
+function parseMarkdown(text) {
+    if (!text) return '';
+    
+    let html = text;
+    
+    // Convert escaped newlines to actual newlines
+    html = html.replace(/\\n/g, '\n');
+    
+    // Parse markdown tables - match table pattern with pipes
+    const tableRegex = /\|(.+)\|[\s\S]*?\n\s*\|[\s\-|:]+\|[\s\S]*?(?=\n\n|\n[^|]|$)/g;
+    html = html.replace(tableRegex, (match) => {
+        const rows = match.split('\n').filter(row => row.trim() && row.includes('|'));
+        if (rows.length < 2) return match;
+        
+        let table = '<table style="border-collapse: collapse; width: 100%; margin: 10px 0; font-size: 14px;">';
+        let headerDone = false;
+        
+        rows.forEach((row, idx) => {
+            const cells = row.split('|').slice(1, -1).map(c => c.trim());
+            
+            // Skip separator row (contains dashes)
+            if (cells.every(c => c === '' || /^-+$/.test(c) || /^:-*-*:?$/.test(c))) {
+                if (!headerDone) {
+                    table += '</tr></thead><tbody>';
+                    headerDone = true;
+                }
+                return;
+            }
+            
+            if (idx === 0) {
+                // Header row
+                table += '<thead><tr>';
+                cells.forEach(cell => {
+                    table += `<th style="border: 1px solid #ddd; padding: 10px; text-align: left; background-color: #f0f0f0; font-weight: bold;">${cell}</th>`;
+                });
+            } else {
+                // Data row
+                if (!headerDone) {
+                    table += '</tr></thead><tbody>';
+                    headerDone = true;
+                }
+                table += '<tr>';
+                cells.forEach(cell => {
+                    table += `<td style="border: 1px solid #ddd; padding: 10px;">${cell}</td>`;
+                });
+                table += '</tr>';
+            }
+        });
+        
+        if (!headerDone) {
+            table += '</tr></thead><tbody>';
+        }
+        table += '</tbody></table>';
+        return table;
+    });
+    
+    // Parse bold
+    html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    html = html.replace(/__(.+?)__/g, '<strong>$1</strong>');
+    
+    // Parse italic
+    html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
+    html = html.replace(/_(.+?)_/g, '<em>$1</em>');
+    
+    // Parse line breaks
+    html = html.replace(/\n/g, '<br>');
+    
+    return html;
 }
 
 function getConversationHistory() {
