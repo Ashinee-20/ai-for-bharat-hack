@@ -83,6 +83,42 @@ body {
     color: var(--text-primary);
 }
 
+.header-buttons {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.voice-call-button {
+    background: transparent;
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    border-radius: 8px;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.voice-call-button:hover {
+    background: var(--hover-bg);
+    border-color: var(--text-primary);
+    color: var(--text-primary);
+}
+
+.voice-call-button:active {
+    transform: scale(0.95);
+}
+
+.voice-call-button.active {
+    background: #10a37f;
+    border-color: #10a37f;
+    color: white;
+}
+
 .clear-chat-button {
     background: transparent;
     border: 1px solid var(--border-color);

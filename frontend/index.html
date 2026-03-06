@@ -16,6 +16,9 @@
     <link rel="apple-touch-icon" href="icon-192.png">
     
     <link rel="stylesheet" href="styles.css">
+    
+    <!-- ElevenLabs ConvAI Widget -->
+    <script src="https://unpkg.com/@elevenlabs/convai-widget-embed" async type="text/javascript"></script>
 </head>
 <body>
     <div class="app-container">
@@ -23,11 +26,18 @@
         <header class="app-header">
             <div class="header-content">
                 <div class="logo">FarmIntel</div>
-                <button id="clearChatButton" class="clear-chat-button" title="Clear chat history">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                        <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                </button>
+                <div class="header-buttons">
+                    <button id="voiceCallButton" class="voice-call-button" title="Start voice call with AI" aria-label="Voice call">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </button>
+                    <button id="clearChatButton" class="clear-chat-button" title="Clear chat history">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </button>
+                </div>
             </div>
         </header>
 
@@ -78,5 +88,8 @@
     </div>
 
     <script src="app.js"></script>
+    
+    <!-- ElevenLabs ConvAI Widget -->
+    <elevenlabs-convai agent-id="agent_5001kjnfqbjwf4j8ew6acrmkrna7"></elevenlabs-convai>
 </body>
 </html>
