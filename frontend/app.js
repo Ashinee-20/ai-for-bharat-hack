@@ -53,6 +53,12 @@ function setupEventListeners() {
     // Send button click
     sendButton.addEventListener('click', handleSendMessage);
     
+    // Voice call button
+    const voiceCallButton = document.getElementById('voiceCallButton');
+    if (voiceCallButton) {
+        voiceCallButton.addEventListener('click', toggleVoiceCall);
+    }
+    
     // Clear chat button
     const clearChatButton = document.getElementById('clearChatButton');
     if (clearChatButton) {
@@ -103,6 +109,25 @@ async function processQuery(query) {
     // Let the LLM decide what to do - no more rule-based routing
     // The backend LLM will fetch prices/insights if needed
     return await getLLMResponse(query);
+}
+
+function toggleVoiceCall() {
+    const voiceCallButton = document.getElementById('voiceCallButton');
+    const convaiWidget = document.querySelector('elevenlabs-convai');
+    
+    if (!convaiWidget) {
+        console.error('ElevenLabs ConvAI widget not found');
+        return;
+    }
+    
+    // Toggle the widget visibility
+    if (convaiWidget.style.display === 'none') {
+        convaiWidget.style.display = 'block';
+        voiceCallButton.classList.add('active');
+    } else {
+        convaiWidget.style.display = 'none';
+        voiceCallButton.classList.remove('active');
+    }
 }
 
 async function getLLMResponse(query) {
