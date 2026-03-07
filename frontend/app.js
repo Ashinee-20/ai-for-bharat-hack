@@ -200,7 +200,7 @@ async function getLLMResponse(query) {
         
         // Try to use offline LLM model
         try {
-            if (typeof WebLLM !== 'undefined') {
+            if (window.WebLLM) {
                 console.log('[FarmIntel] Running local TinyLlama model...');
                 const offlineLLMResponse = await generateOfflineLLMResponse(query);
                 console.log('[FarmIntel] Offline LLM response generated');

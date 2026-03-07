@@ -14,12 +14,36 @@ let engine = null;
 let modelLoaded = false;
 let modelLoading = false;
 
-console.log('[OfflineLLM] Script loaded, WebLLM available:', typeof WebLLM !== 'undefined');
+/**
+ * Wait for WebLLM library to load from CDN
+ */
+async function waitForWebLLM() {
+    let attempts = 0;
+    while (typeof WebLLM === 'undefined') {
+        console.log('[OfflineLLM] Waiting for WebLLM... (attempt ' + (attempts + 1) + ')');
+        await new Promise(r => setTimeout(r, 200));
+        attempts++;
+        
+        if (attempts > 50) {
+            console.error('[OfflineLLM] WebLLM failed to load after 10 seconds');
+            return false;
+        }
+    }
+    
+    console.log('[OfflineLLM] WebLLM loaded successfully');
+    return true;
+}
 
 /**
  * Load the offline TinyLlama model
  */
 async function loadOfflineModel() {
+    // Wait for WebLLM to be available
+    const ready = await waitForWebLLM();
+    if (!ready) {
+        throw new Error('WebLLM failed to load');
+    }
+    
     if (modelLoaded) {
         console.log('[OfflineLLM] Model already loaded');
         return;
