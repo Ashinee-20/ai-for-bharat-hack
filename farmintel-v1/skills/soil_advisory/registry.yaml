@@ -1,0 +1,55 @@
+# Soil Advisory Skill Registry
+
+skill:
+  name: "Soil Advisory"
+  version: "1.0.0"
+  description: "Soil diagnostics, nutrient analysis, health assessment, and pH management"
+  
+  domains:
+    - soil_diagnostics
+    - soil_nutrients
+    - soil_health
+    - soil_ph
+    - soil_problems
+  
+  soil_types:
+    - sandy
+    - clay
+    - loamy
+    - mixed
+  
+  tools_required:
+    - soil_database
+    - nutrient_lookup
+    - soil_health_calculator
+    - ph_analyzer
+    - soil_texture_classifier
+  
+  diagnostic_areas:
+    - soil_type_identification
+    - soil_texture_analysis
+    - soil_structure_analysis
+    - nitrogen_analysis
+    - phosphorus_analysis
+    - potassium_analysis
+    - micronutrient_analysis
+    - soil_health_score
+    - compost_recommendation
+    - manure_management
+    - ph_detection
+    - acidic_soil_correction
+    - alkaline_soil_correction
+    - salinity_management
+    - erosion_control
+    - soil_compaction_management
+  
+  knowledge_base:
+    - soil_properties.json
+    - nutrient_requirements.json
+    - amendment_recommendations.json
+    - ph_correction_methods.json
+  
+  performance_metrics:
+    accuracy_target: 0.92
+    response_time_target_seconds: 2
+    user_satisfaction_target: 0.88

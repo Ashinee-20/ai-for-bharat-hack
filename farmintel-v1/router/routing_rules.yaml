@@ -1,0 +1,248 @@
+# Routing Rules for FarmIntel
+
+routing_rules:
+  
+  # Crop Advisory Rules
+  crop_advisory:
+    keywords:
+      - crop
+      - plant
+      - growing
+      - cultivation
+      - variety
+      - seed
+      - seedling
+      - germination
+    priority: 1
+    sub_routes:
+      - crop_planning
+      - crop_lifecycle
+      - crop_selection
+  
+  # Soil Advisory Rules
+  soil_advisory:
+    keywords:
+      - soil
+      - earth
+      - ground
+      - fertility
+      - texture
+      - structure
+      - compaction
+    priority: 2
+    sub_routes:
+      - soil_diagnostics
+      - soil_nutrients
+      - soil_health
+      - soil_ph
+  
+  # Pest Advisory Rules
+  pest_advisory:
+    keywords:
+      - pest
+      - insect
+      - bug
+      - infestation
+      - aphid
+      - whitefly
+      - caterpillar
+      - mite
+      - borer
+      - locust
+    priority: 3
+    sub_routes:
+      - pest_detection
+      - pest_control
+      - integrated_pest_management
+  
+  # Disease Advisory Rules
+  disease_advisory:
+    keywords:
+      - disease
+      - infection
+      - fungal
+      - bacterial
+      - viral
+      - blight
+      - rot
+      - wilt
+      - spot
+      - leaf_spot
+    priority: 4
+    sub_routes:
+      - disease_detection
+      - disease_treatment
+      - prevention
+  
+  # Weather Advisory Rules
+  weather_advisory:
+    keywords:
+      - weather
+      - rain
+      - rainfall
+      - temperature
+      - humidity
+      - wind
+      - drought
+      - flood
+      - frost
+      - storm
+      - climate
+    priority: 5
+    sub_routes:
+      - weather_monitoring
+      - weather_risks
+      - weather_based_advice
+  
+  # Irrigation Advisory Rules
+  irrigation_advisory:
+    keywords:
+      - water
+      - irrigation
+      - drip
+      - sprinkler
+      - watering
+      - moisture
+      - drought
+      - flood
+    priority: 6
+    sub_routes:
+      - irrigation_methods
+      - irrigation_planning
+      - water_management
+  
+  # Fertilizer Advisory Rules
+  fertilizer_advisory:
+    keywords:
+      - fertilizer
+      - manure
+      - compost
+      - npk
+      - nitrogen
+      - phosphorus
+      - potassium
+      - nutrient
+      - feeding
+    priority: 7
+    sub_routes:
+      - chemical_fertilizers
+      - organic_fertilizers
+      - fertilizer_scheduling
+  
+  # Horticulture Advisory Rules
+  horticulture_advisory:
+    keywords:
+      - flower
+      - horticulture
+      - nursery
+      - greenhouse
+      - rose
+      - jasmine
+      - marigold
+    priority: 8
+    sub_routes:
+      - flower_farming
+      - nursery_management
+      - greenhouse_management
+  
+  # Commercial Farming Rules
+  commercial_farming:
+    keywords:
+      - commercial
+      - large_scale
+      - industrial
+      - export
+      - mechanization
+      - equipment
+      - labor
+    priority: 9
+    sub_routes:
+      - large_scale_planning
+      - farm_mechanization
+      - farm_operations
+  
+  # Livestock Advisory Rules
+  livestock_advisory:
+    keywords:
+      - livestock
+      - cattle
+      - cow
+      - dairy
+      - animal
+      - poultry
+      - feed
+      - vaccination
+    priority: 10
+    sub_routes:
+      - cattle_farming
+      - animal_nutrition
+      - animal_health
+      - dairy_management
+  
+  # Aquaculture Advisory Rules
+  aquaculture_advisory:
+    keywords:
+      - aquaculture
+      - fish
+      - pond
+      - water_quality
+      - fish_farming
+    priority: 11
+    sub_routes:
+      - fish_farming
+      - pond_management
+      - fish_health
+  
+  # Farm Economics Rules
+  farm_economics:
+    keywords:
+      - economics
+      - profit
+      - cost
+      - roi
+      - price
+      - market
+      - income
+      - expense
+    priority: 12
+    sub_routes:
+      - profit_planning
+      - cost_analysis
+      - market_intelligence
+  
+  # Post Harvest Advisory Rules
+  post_harvest:
+    keywords:
+      - harvest
+      - post_harvest
+      - storage
+      - processing
+      - value_addition
+      - grain
+      - cold_storage
+    priority: 13
+    sub_routes:
+      - harvest_management
+      - storage_management
+      - processing
+
+# Context Preservation Rules
+context_rules:
+  preserve_crop: true
+  preserve_stage: true
+  preserve_location: true
+  preserve_season: true
+  max_context_age_minutes: 30
+
+# Fallback Rules
+fallback_rules:
+  use_offline_mode: true
+  use_cached_data: true
+  use_general_advice: true
+  ask_clarifying_questions: true
+
+# Priority Resolution
+priority_resolution:
+  method: keyword_match_count
+  tie_breaker: recency
+  min_confidence: 0.6

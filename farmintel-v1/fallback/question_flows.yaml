@@ -1,0 +1,298 @@
+# Offline Question Flows for Guided Assistance
+
+question_flows:
+  
+  # Weather Flow
+  weather_flow:
+    name: "Weather Information Collection"
+    questions:
+      - question: "What is the current temperature in your area?"
+        type: "numeric"
+        unit: "celsius"
+        required: true
+      
+      - question: "What season is it?"
+        type: "choice"
+        options:
+          - "Summer (March-May)"
+          - "Monsoon (June-September)"
+          - "Winter (October-February)"
+        required: true
+      
+      - question: "Is rainfall expected?"
+        type: "yes_no"
+        required: true
+      
+      - question: "What is the humidity level?"
+        type: "choice"
+        options:
+          - "Low (< 40%)"
+          - "Medium (40-70%)"
+          - "High (> 70%)"
+        required: false
+    
+    response_template: "weather_advisory"
+  
+  # Soil Flow
+  soil_flow:
+    name: "Soil Information Collection"
+    questions:
+      - question: "What is your soil type?"
+        type: "choice"
+        options:
+          - "Sandy (drains quickly)"
+          - "Clay (holds water)"
+          - "Loamy (balanced)"
+          - "Mixed/Unknown"
+        required: true
+      
+      - question: "What is the soil pH?"
+        type: "choice"
+        options:
+          - "Acidic (< 6.5)"
+          - "Neutral (6.5-7.5)"
+          - "Alkaline (> 7.5)"
+          - "Unknown"
+        required: true
+      
+      - question: "Have you done a soil test?"
+        type: "yes_no"
+        required: false
+      
+      - question: "What color is your soil?"
+        type: "choice"
+        options:
+          - "Black/Dark"
+          - "Brown"
+          - "Red"
+          - "Yellow/Light"
+        required: false
+    
+    response_template: "soil_advisory"
+  
+  # Crop Flow
+  crop_flow:
+    name: "Crop Information Collection"
+    questions:
+      - question: "Which crop are you growing?"
+        type: "text"
+        required: true
+      
+      - question: "What stage is the crop in?"
+        type: "choice"
+        options:
+          - "Seedling (0-3 weeks)"
+          - "Vegetative (3-8 weeks)"
+          - "Flowering (8-12 weeks)"
+          - "Fruiting (12-16 weeks)"
+          - "Maturation (16+ weeks)"
+        required: true
+      
+      - question: "How long has it been growing?"
+        type: "numeric"
+        unit: "weeks"
+        required: false
+      
+      - question: "What is the soil condition?"
+        type: "choice"
+        options:
+          - "Very good"
+          - "Good"
+          - "Average"
+          - "Poor"
+        required: false
+    
+    response_template: "crop_advisory"
+  
+  # Pest Flow
+  pest_flow:
+    name: "Pest Information Collection"
+    questions:
+      - question: "What symptoms do you see?"
+        type: "multi_choice"
+        options:
+          - "Leaf spots"
+          - "Yellow leaves"
+          - "Holes in leaves"
+          - "Wilting"
+          - "Sticky residue"
+          - "Webbing"
+          - "Visible insects"
+        required: true
+      
+      - question: "Where are the pests?"
+        type: "choice"
+        options:
+          - "On leaves"
+          - "On stems"
+          - "On roots"
+          - "On fruits"
+          - "Throughout plant"
+        required: true
+      
+      - question: "How widespread is the infestation?"
+        type: "choice"
+        options:
+          - "Few plants affected"
+          - "Some plants affected"
+          - "Most plants affected"
+          - "All plants affected"
+        required: true
+      
+      - question: "Do you prefer organic or chemical control?"
+        type: "choice"
+        options:
+          - "Organic only"
+          - "Chemical only"
+          - "Either is fine"
+        required: false
+    
+    response_template: "pest_advisory"
+  
+  # Disease Flow
+  disease_flow:
+    name: "Disease Information Collection"
+    questions:
+      - question: "What are the symptoms?"
+        type: "multi_choice"
+        options:
+          - "Brown spots"
+          - "Yellow patches"
+          - "Wilting"
+          - "Rotting"
+          - "Powdery coating"
+          - "Leaf curl"
+          - "Stem canker"
+        required: true
+      
+      - question: "Which part of plant is affected?"
+        type: "choice"
+        options:
+          - "Leaves"
+          - "Stems"
+          - "Roots"
+          - "Fruits"
+          - "Multiple parts"
+        required: true
+      
+      - question: "How quickly is it spreading?"
+        type: "choice"
+        options:
+          - "Slowly"
+          - "Moderately"
+          - "Rapidly"
+        required: true
+    
+    response_template: "disease_advisory"
+  
+  # Irrigation Flow
+  irrigation_flow:
+    name: "Irrigation Information Collection"
+    questions:
+      - question: "How often are you watering?"
+        type: "choice"
+        options:
+          - "Daily"
+          - "Every 2-3 days"
+          - "Weekly"
+          - "As needed"
+        required: true
+      
+      - question: "What is the soil moisture?"
+        type: "choice"
+        options:
+          - "Very wet"
+          - "Moist"
+          - "Dry"
+          - "Very dry"
+        required: true
+      
+      - question: "What is the weather like?"
+        type: "choice"
+        options:
+          - "Hot and dry"
+          - "Warm and humid"
+          - "Cool"
+          - "Rainy"
+        required: true
+      
+      - question: "What crop are you growing?"
+        type: "text"
+        required: false
+    
+    response_template: "irrigation_advisory"
+  
+  # Fertilizer Flow
+  fertilizer_flow:
+    name: "Fertilizer Information Collection"
+    questions:
+      - question: "What crop are you growing?"
+        type: "text"
+        required: true
+      
+      - question: "What stage is the crop in?"
+        type: "choice"
+        options:
+          - "Pre-planting"
+          - "Seedling"
+          - "Vegetative"
+          - "Flowering"
+          - "Fruiting"
+        required: true
+      
+      - question: "Have you done a soil test?"
+        type: "yes_no"
+        required: false
+      
+      - question: "What fertilizers do you have available?"
+        type: "multi_choice"
+        options:
+          - "Compost"
+          - "Manure"
+          - "Chemical NPK"
+          - "Urea"
+          - "DAP"
+          - "MOP"
+          - "Vermicompost"
+        required: false
+    
+    response_template: "fertilizer_advisory"
+  
+  # Harvest Flow
+  harvest_flow:
+    name: "Harvest Information Collection"
+    questions:
+      - question: "What crop are you growing?"
+        type: "text"
+        required: true
+      
+      - question: "How long has it been growing?"
+        type: "numeric"
+        unit: "weeks"
+        required: true
+      
+      - question: "What is the current condition?"
+        type: "choice"
+        options:
+          - "Early stage"
+          - "Mid stage"
+          - "Ready to harvest"
+          - "Overripe"
+        required: true
+      
+      - question: "Do you have storage facilities?"
+        type: "yes_no"
+        required: false
+    
+    response_template: "harvest_advisory"
+
+# Response Templates
+response_templates:
+  weather_advisory: "weather_response.txt"
+  soil_advisory: "soil_response.txt"
+  crop_advisory: "crop_response.txt"
+  pest_advisory: "pest_response.txt"
+  disease_advisory: "disease_response.txt"
+  irrigation_advisory: "irrigation_response.txt"
+  fertilizer_advisory: "fertilizer_response.txt"
+  harvest_advisory: "harvest_response.txt"

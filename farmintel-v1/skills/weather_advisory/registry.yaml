@@ -1,0 +1,53 @@
+# Weather Advisory Skill Registry
+
+skill:
+  name: "Weather Advisory"
+  version: "1.0.0"
+  description: "Weather monitoring, risk assessment, and weather-based farming advice"
+  
+  domains:
+    - weather_monitoring
+    - weather_risks
+    - weather_based_advice
+  
+  monitoring_parameters:
+    - temperature_analysis
+    - rainfall_analysis
+    - humidity_analysis
+    - wind_analysis
+    - solar_radiation
+    - evapotranspiration
+  
+  risk_types:
+    - drought_warning
+    - flood_warning
+    - frost_warning
+    - heat_stress_warning
+    - storm_warning
+    - hail_warning
+    - cold_wave_warning
+  
+  advisory_areas:
+    - irrigation_planning
+    - planting_time_advice
+    - harvest_timing_advice
+    - pest_disease_risk
+    - crop_protection_measures
+  
+  tools_required:
+    - weather_api
+    - rainfall_forecast
+    - temperature_forecast
+    - humidity_monitor
+    - wind_analysis
+  
+  knowledge_base:
+    - weather_patterns.json
+    - crop_weather_requirements.json
+    - risk_thresholds.json
+    - advisory_strategies.json
+  
+  performance_metrics:
+    accuracy_target: 0.88
+    response_time_target_seconds: 2
+    user_satisfaction_target: 0.85
