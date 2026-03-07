@@ -13,11 +13,16 @@ const loadingIndicator = document.getElementById('loadingIndicator');
 let isProcessing = false;
 
 // Initialize App
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     initializeApp();
     setupEventListeners();
     registerServiceWorker();
     setupNetworkListener();
+
+    if (typeof WebLLM !== 'undefined') {
+        console.log('[FarmIntel] Preloading TinyLlama model...');
+        loadOfflineModel().catch(console.error);
+    }
 });
 
 function setupNetworkListener() {
