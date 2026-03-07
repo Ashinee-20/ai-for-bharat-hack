@@ -24,8 +24,8 @@ async function waitForWebLLM() {
         await new Promise(r => setTimeout(r, 200));
         attempts++;
         
-        if (attempts > 50) {
-            console.error('[OfflineLLM] WebLLM failed to load after 10 seconds');
+        if (attempts > 200) {
+            console.error('[OfflineLLM] WebLLM failed to load after 40 seconds');
             return false;
         }
     }

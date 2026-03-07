@@ -19,10 +19,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     registerServiceWorker();
     setupNetworkListener();
 
-    if (typeof WebLLM !== 'undefined') {
-        console.log('[FarmIntel] Preloading TinyLlama model...');
-        loadOfflineModel().catch(console.error);
-    }
+    console.log('[FarmIntel] Preloading TinyLlama model...');
+    loadOfflineModel().catch(console.error);
 });
 
 function setupNetworkListener() {
@@ -200,19 +198,13 @@ async function getLLMResponse(query) {
         
         // Try to use offline LLM model
         try {
-            if (window.WebLLM) {
-                console.log('[FarmIntel] Running local TinyLlama model...');
-                const offlineLLMResponse = await generateOfflineLLMResponse(query);
-                console.log('[FarmIntel] Offline LLM response generated');
-                return `<div>${offlineLLMResponse}</div>`;
-            } else {
-                console.log('[FarmIntel] WebLLM not available, using fallback responses');
-                const offlineResponse = getOfflineResponse(query);
-                return offlineResponse;
-            }
+            console.log('[FarmIntel] Running local TinyLlama model...');
+            const offlineLLMResponse = await generateOfflineLLMResponse(query);
+            console.log('[FarmIntel] Offline LLM response generated');
+            return `<div>${offlineLLMResponse}</div>`;
         } catch (offlineError) {
             console.error('[FarmIntel] Offline LLM error:', offlineError);
-            console.log('[FarmIntel] Falling back to template responses');
+            console.log('[FarmIntel] Local model unavailable, using fallback responses');
             try {
                 const offlineResponse = getOfflineResponse(query);
                 return offlineResponse;
