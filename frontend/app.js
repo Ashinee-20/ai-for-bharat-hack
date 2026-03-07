@@ -20,7 +20,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     setupNetworkListener();
 
     console.log('[FarmIntel] Preloading TinyLlama model...');
-    loadOfflineModel().catch(console.error);
+    // Model preloading happens in offline-llm.js automatically
 });
 
 function setupNetworkListener() {
