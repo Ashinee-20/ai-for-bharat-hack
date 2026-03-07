@@ -17,7 +17,50 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeApp();
     setupEventListeners();
     registerServiceWorker();
+    setupNetworkListener();
 });
+
+function setupNetworkListener() {
+    /**
+     * Listen for online/offline events and check periodically
+     */
+    window.addEventListener('online', () => {
+        console.log('[FarmIntel] Network event: ONLINE');
+        updateStatusIndicator('online');
+        addMessage('🟢 You are back online!', 'bot');
+    });
+    
+    window.addEventListener('offline', () => {
+        console.log('[FarmIntel] Network event: OFFLINE');
+        updateStatusIndicator('offline');
+        addMessage('🔴 You are now offline. Using offline mode for responses.', 'bot');
+    });
+    
+    // Set initial status
+    if (navigator.onLine) {
+        console.log('[FarmIntel] Initial status: Online');
+        updateStatusIndicator('online');
+    } else {
+        console.log('[FarmIntel] Initial status: Offline');
+        updateStatusIndicator('offline');
+    }
+    
+    // Check periodically (every 2 seconds) to catch network changes
+    setInterval(() => {
+        const currentStatus = navigator.onLine;
+        const indicator = document.getElementById('statusIndicator');
+        if (indicator) {
+            const isShowingOnline = indicator.innerHTML.includes('Online');
+            if (currentStatus && !isShowingOnline) {
+                console.log('[FarmIntel] Detected online status change');
+                updateStatusIndicator('online');
+            } else if (!currentStatus && isShowingOnline) {
+                console.log('[FarmIntel] Detected offline status change');
+                updateStatusIndicator('offline');
+            }
+        }
+    }, 2000);
+}
 
 function initializeApp() {
     // Check if we need to clear corrupted chat history
@@ -125,12 +168,19 @@ function toggleVoiceCall() {
 async function getLLMResponse(query) {
     try {
         const isOnline = navigator.onLine;
-        console.log('[FarmIntel] Online status:', isOnline);
+        console.log('[FarmIntel] navigator.onLine:', isOnline);
         
+        // If online, try API with timeout
         if (isOnline) {
             try {
                 console.log('[FarmIntel] Attempting online API call...');
+                updateStatusIndicator('online');
+                
                 const conversationHistory = getConversationHistory();
+                
+                // Use AbortController for timeout
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
                 
                 const response = await fetch(`${API_BASE_URL}/api/llm/query?t=${Date.now()}`, {
                     method: 'POST',
@@ -144,8 +194,11 @@ async function getLLMResponse(query) {
                         query: query,
                         language: 'en',
                         conversation_history: conversationHistory
-                    })
+                    }),
+                    signal: controller.signal
                 });
+                
+                clearTimeout(timeoutId);
                 
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
@@ -159,27 +212,32 @@ async function getLLMResponse(query) {
                 
                 if (data.response) {
                     const formattedResponse = parseMarkdown(data.response);
-                    updateStatusIndicator('online');
+                    console.log('[FarmIntel] Online response received');
                     return `<div>${formattedResponse}</div>`;
                 } else {
                     return `<p>I can help you with crop prices, market insights, and farming advice. What would you like to know?</p>`;
                 }
             } catch (onlineError) {
-                console.error('[FarmIntel] Online API failed:', onlineError);
-                console.log('[FarmIntel] Falling back to offline mode...');
+                console.error('[FarmIntel] Online API failed:', onlineError.message);
+                console.log('[FarmIntel] Switching to offline mode...');
+                updateStatusIndicator('offline');
+                // Fall through to offline mode
             }
+        } else {
+            console.log('[FarmIntel] Browser reports offline, using offline mode');
+            updateStatusIndicator('offline');
         }
         
-        console.log('[FarmIntel] Using offline mode...');
-        updateStatusIndicator('offline');
-        
+        // Offline mode
+        console.log('[FarmIntel] Using offline response generator...');
         try {
             const offlineResponse = getOfflineResponse(query);
-            console.log('[FarmIntel] Offline response generated');
+            console.log('[FarmIntel] Offline response generated successfully');
             return offlineResponse;
         } catch (offlineError) {
-            console.error('[FarmIntel] Offline error:', offlineError);
-            return `<p>Unable to generate response. Please try again or reconnect to internet.</p>`;
+            console.error('[FarmIntel] Offline response error:', offlineError);
+            return `<p><strong>Offline Mode</strong></p>
+                    <p>Unable to generate response. Please try a different question or reconnect to internet.</p>`;
         }
         
     } catch (error) {
