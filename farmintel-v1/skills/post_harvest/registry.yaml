@@ -1,0 +1,27 @@
+name: Post Harvest Advisory
+description: Harvest timing, storage, and value addition
+version: 1.0.0
+enabled: true
+
+skills:
+  harvest:
+    - harvest_timing
+    - harvesting_methods
+  
+  storage:
+    - grain_storage
+    - cold_storage
+    - pest_free_storage
+  
+  processing:
+    - crop_processing
+    - value_addition
+
+tools:
+  - harvest_calendar
+  - storage_guide
+  - processing_database
+  - value_addition_guide
+
+prompts:
+  - advisory_prompts.md

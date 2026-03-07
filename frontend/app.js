@@ -1,4 +1,4 @@
-// FarmIntel PWA - Main Application Logic
+// FarmIntel PWA - Main Application Logic (Online Only)
 
 // Configuration
 const API_BASE_URL = 'https://aj59v1wf4j.execute-api.ap-south-1.amazonaws.com/Prod';
@@ -113,21 +113,13 @@ async function processQuery(query) {
 
 function toggleVoiceCall() {
     const voiceCallButton = document.getElementById('voiceCallButton');
-    const convaiWidget = document.querySelector('elevenlabs-convai');
     
-    if (!convaiWidget) {
-        console.error('ElevenLabs ConvAI widget not found');
-        return;
-    }
+    // ElevenLabs widget auto-initializes and shows floating button
+    // Just toggle the active state for visual feedback
+    voiceCallButton.classList.toggle('active');
     
-    // Toggle the widget visibility
-    if (convaiWidget.style.display === 'none') {
-        convaiWidget.style.display = 'block';
-        voiceCallButton.classList.add('active');
-    } else {
-        convaiWidget.style.display = 'none';
-        voiceCallButton.classList.remove('active');
-    }
+    // The widget should be visible - it's a floating button in bottom right
+    console.log('Voice call activated - ElevenLabs widget should appear in bottom right corner');
 }
 
 async function getLLMResponse(query) {
@@ -156,8 +148,12 @@ async function getLLMResponse(query) {
         
         const data = await response.json();
         
+        // Cache the response for offline use
+        if (data.context) {
+            offlineCache.saveContext(query, data.context);
+        }
+        
         if (data.response) {
-            // Parse markdown in response
             const formattedResponse = parseMarkdown(data.response);
             return `<div>${formattedResponse}</div>`;
         } else {
@@ -166,6 +162,230 @@ async function getLLMResponse(query) {
     } catch (error) {
         console.error('LLM API Error:', error);
         throw new Error('Failed to get AI response');
+    }
+}
+
+function getOfflineResponse(query) {
+    /**
+     * Generate offline response based on query type
+     */
+    const crop = extractCrop(query);
+    const queryType = identifyQueryType(query);
+    
+    let response = '';
+    
+    switch(queryType) {
+        case 'price':
+            response = generatePriceResponse(crop);
+            break;
+        case 'weather':
+            response = generateWeatherResponse();
+            break;
+        case 'soil':
+            response = generateSoilResponse();
+            break;
+        case 'pest':
+            response = generatePestResponse();
+            break;
+        case 'disease':
+            response = generateDiseaseResponse();
+            break;
+        case 'irrigation':
+            response = generateIrrigationResponse();
+            break;
+        case 'fertilizer':
+            response = generateFertilizerResponse();
+            break;
+        case 'harvest':
+            response = generateHarvestResponse();
+            break;
+        default:
+            response = generateGeneralResponse();
+    }
+    
+    return `<div>${response}</div>`;
+}
+
+function extractCrop(query) {
+    const crops = [
+        'wheat', 'rice', 'tomato', 'potato', 'onion', 'cotton', 'sugarcane',
+        'maize', 'barley', 'chickpea', 'lentil', 'soybean', 'groundnut',
+        'mango', 'banana', 'citrus', 'apple', 'coconut', 'guava', 'papaya',
+        'chilli', 'cabbage', 'cauliflower', 'brinjal'
+    ];
+    
+    const queryLower = query.toLowerCase();
+    for (let crop of crops) {
+        if (queryLower.includes(crop)) {
+            return crop;
+        }
+    }
+    return null;
+}
+
+function identifyQueryType(query) {
+    const queryLower = query.toLowerCase();
+    
+    if (queryLower.match(/price|cost|rate|mandi|market|sell|buy/)) return 'price';
+    if (queryLower.match(/weather|rain|temperature|humidity|wind/)) return 'weather';
+    if (queryLower.match(/soil|ph|nitrogen|phosphorus|nutrient/)) return 'soil';
+    if (queryLower.match(/pest|insect|bug|aphid|whitefly/)) return 'pest';
+    if (queryLower.match(/disease|fungal|bacterial|blight|wilt/)) return 'disease';
+    if (queryLower.match(/water|irrigation|drip|drought/)) return 'irrigation';
+    if (queryLower.match(/fertilizer|manure|compost|npk/)) return 'fertilizer';
+    if (queryLower.match(/harvest|reap|storage|post-harvest/)) return 'harvest';
+    
+    return 'general';
+}
+
+function generatePriceResponse(crop) {
+    if (!crop) {
+        return "Please specify which crop you're asking about (e.g., wheat, rice, tomato).";
+    }
+    
+    const cached = offlineCache.get(crop);
+    if (cached && cached.prices) {
+        let response = `**Cached Mandi Prices for ${crop.charAt(0).toUpperCase() + crop.slice(1)}**\n\n`;
+        response += "| Mandi | Price (₹) | State |\n";
+        response += "|-------|-----------|-------|\n";
+        
+        cached.prices.slice(0, 5).forEach(price => {
+            response += `| ${price.mandi} | ${price.price} | ${price.state} |\n`;
+        });
+        
+        response += `\n*Last updated: ${cached.prices[0].date}*\n`;
+        response += "*Note: This is cached data. Connect to internet for real-time prices.*";
+        return response;
+    }
+    
+    return `No cached price data available for ${crop}. Please connect to internet for latest prices.`;
+}
+
+function generateWeatherResponse() {
+    return `**Weather Advisory (Offline Mode)**\n\n` +
+        `Since I'm offline, I can't provide real-time weather data.\n\n` +
+        `**What you can do:**\n` +
+        `1. Check local weather forecast\n` +
+        `2. Ask: What is the current temperature?\n` +
+        `3. Ask: Is rainfall expected?\n\n` +
+        `**General Tips:**\n` +
+        `- Most crops need 20-30°C temperature\n` +
+        `- Avoid planting during extreme heat or cold\n` +
+        `- Monitor rainfall for irrigation planning`;
+}
+
+function generateSoilResponse() {
+    return `**Soil Advisory (Offline Mode)**\n\n` +
+        `**Common Soil Issues & Solutions:**\n\n` +
+        `**Acidic Soil (pH < 6.5):**\n` +
+        `- Add lime or wood ash (2-3 tons/hectare)\n\n` +
+        `**Alkaline Soil (pH > 8.0):**\n` +
+        `- Add sulfur or gypsum (1-2 tons/hectare)\n\n` +
+        `**Low Nitrogen:**\n` +
+        `- Add compost or manure (5-10 tons/hectare)\n\n` +
+        `**For accurate soil testing, connect to internet for lab recommendations.**`;
+}
+
+function generatePestResponse() {
+    return `**Pest Management (Offline Mode)**\n\n` +
+        `**Common Pests & Organic Control:**\n\n` +
+        `**Aphids:** Spray neem oil (3%) or use soap spray\n` +
+        `**Whiteflies:** Yellow sticky traps or neem spray\n` +
+        `**Caterpillars:** Hand-pick or use Bt spray\n` +
+        `**Mites:** Sulfur dust or neem oil spray\n\n` +
+        `*For chemical pesticides, connect to internet for recommendations.*`;
+}
+
+function generateDiseaseResponse() {
+    return `**Disease Management (Offline Mode)**\n\n` +
+        `**Common Symptoms & Prevention:**\n\n` +
+        `**Yellow Leaves:** Could be nitrogen deficiency or fungal disease\n` +
+        `**Brown Spots:** Likely fungal infection - remove affected parts\n` +
+        `**Wilting:** Check soil moisture, could be root rot\n\n` +
+        `**Prevention:**\n` +
+        `- Crop rotation\n` +
+        `- Remove infected plants\n` +
+        `- Maintain proper spacing`;
+}
+
+function generateIrrigationResponse() {
+    return `**Irrigation Advisory (Offline Mode)**\n\n` +
+        `**General Water Requirements:**\n` +
+        `- Cereals: 40-60 cm per season\n` +
+        `- Vegetables: 30-50 cm per season\n` +
+        `- Fruits: 60-100 cm per season\n\n` +
+        `**Irrigation Frequency:**\n` +
+        `- Summer: Every 7-10 days\n` +
+        `- Winter: Every 15-20 days\n\n` +
+        `**Check soil moisture:** Squeeze soil - if it crumbles, water needed`;
+}
+
+function generateFertilizerResponse() {
+    return `**Fertilizer Advisory (Offline Mode)**\n\n` +
+        `**Organic Fertilizers:**\n` +
+        `- Compost: 5-10 tons/hectare\n` +
+        `- Vermicompost: 2-5 tons/hectare\n` +
+        `- Cow Manure: 10-15 tons/hectare\n\n` +
+        `**NPK Ratios by Stage:**\n` +
+        `- Pre-planting: 10:26:26 (high phosphorus)\n` +
+        `- Vegetative: 20:20:20 (balanced)\n` +
+        `- Flowering: 10:52:10 (high phosphorus)\n` +
+        `- Fruiting: 10:10:40 (high potassium)`;
+}
+
+function generateHarvestResponse() {
+    return `**Harvest Advisory (Offline Mode)**\n\n` +
+        `**General Harvest Indicators:**\n` +
+        `- Cereals: When grain is hard and doesn't dent\n` +
+        `- Vegetables: Pick at proper maturity\n` +
+        `- Fruits: When fully colored and slightly soft\n\n` +
+        `**Post-Harvest Storage:**\n` +
+        `- Dry grains to 12-14% moisture\n` +
+        `- Store in cool, dry place\n` +
+        `- Use airtight containers`;
+}
+
+function generateGeneralResponse() {
+    return `**General Agricultural Advice (Offline Mode)**\n\n` +
+        `I'm currently in offline mode with limited capabilities.\n\n` +
+        `**What I can help with offline:**\n` +
+        `- Cached crop prices\n` +
+        `- General farming tips\n` +
+        `- Pest and disease management\n` +
+        `- Soil and irrigation advice\n\n` +
+        `**For real-time data, please connect to internet.**`;
+}
+
+function cacheResponseData(query, context) {
+    /**
+     * Cache response data for offline use
+     */
+    if (context.crop) {
+        offlineCache.set(context.crop, context);
+    }
+}
+
+function updateStatusIndicator(mode) {
+    /**
+     * Update UI status indicator
+     */
+    const header = document.querySelector('.app-header');
+    if (!header) return;
+    
+    let indicator = document.getElementById('statusIndicator');
+    if (!indicator) {
+        indicator = document.createElement('div');
+        indicator.id = 'statusIndicator';
+        indicator.style.cssText = 'position: absolute; right: 100px; top: 50%; transform: translateY(-50%); font-size: 12px; padding: 4px 8px; border-radius: 4px; background: rgba(0,0,0,0.1);';
+        header.querySelector('.header-content').appendChild(indicator);
+    }
+    
+    if (mode === 'online') {
+        indicator.innerHTML = '🟢 Online';
+        indicator.style.color = '#10a37f';
+    } else {
+        indicator.innerHTML = '🔴 Offline';
+        indicator.style.color = '#ef4444';
     }
 }
 

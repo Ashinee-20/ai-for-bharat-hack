@@ -1,0 +1,29 @@
+name: Fertilizer Advisory
+description: Fertilizer recommendations and nutrient management
+version: 1.0.0
+enabled: true
+
+skills:
+  chemical_fertilizers:
+    - nitrogen_fertilizer
+    - phosphorus_fertilizer
+    - potassium_fertilizer
+  
+  organic_fertilizers:
+    - compost
+    - vermicompost
+    - green_manure
+  
+  fertilizer_scheduling:
+    - pre_planting
+    - vegetative_stage
+    - flowering_stage
+
+tools:
+  - fertilizer_calculator
+  - npk_ratio_database
+  - organic_fertilizer_guide
+  - nutrient_deficiency_detector
+
+prompts:
+  - advisory_prompts.md

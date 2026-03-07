@@ -1,0 +1,28 @@
+name: Farm Economics Advisory
+description: Profit planning, cost analysis, and market intelligence
+version: 1.0.0
+enabled: true
+
+skills:
+  profit_planning:
+    - crop_profit_estimation
+    - farm_roi_analysis
+  
+  cost_analysis:
+    - seed_cost_analysis
+    - fertilizer_cost_analysis
+    - labor_cost_analysis
+  
+  market_intelligence:
+    - market_price_analysis
+    - crop_price_forecasting
+
+tools:
+  - market_price_api
+  - commodity_price_dataset
+  - farm_roi_calculator
+  - cost_estimator
+  - market_demand_analyzer
+
+prompts:
+  - advisory_prompts.md

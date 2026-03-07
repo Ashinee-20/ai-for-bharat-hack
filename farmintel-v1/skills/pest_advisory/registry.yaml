@@ -1,0 +1,56 @@
+# Pest Advisory Skill Registry
+
+skill:
+  name: "Pest Advisory"
+  version: "1.0.0"
+  description: "Pest detection, identification, and integrated pest management"
+  
+  domains:
+    - pest_detection
+    - pest_identification
+    - pest_control
+    - integrated_pest_management
+  
+  pest_types:
+    - aphids
+    - whiteflies
+    - caterpillars
+    - mites
+    - borers
+    - locusts
+    - scale_insects
+    - thrips
+    - beetles
+    - grasshoppers
+  
+  detection_areas:
+    - leaf_pest_detection
+    - stem_pest_detection
+    - root_pest_detection
+    - fruit_pest_detection
+  
+  control_methods:
+    - chemical_pesticide_recommendation
+    - organic_pesticide_recommendation
+    - biological_control
+    - integrated_pest_management
+    - cultural_practices
+    - mechanical_control
+  
+  tools_required:
+    - pest_database
+    - pesticide_database
+    - pest_lifecycle_predictor
+    - organic_control_database
+  
+  knowledge_base:
+    - pest_identification.json
+    - pest_lifecycle.json
+    - pesticide_recommendations.json
+    - organic_alternatives.json
+    - ipm_strategies.json
+  
+  performance_metrics:
+    accuracy_target: 0.90
+    response_time_target_seconds: 3
+    user_satisfaction_target: 0.87

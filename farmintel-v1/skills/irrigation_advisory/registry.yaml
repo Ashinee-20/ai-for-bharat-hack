@@ -1,0 +1,24 @@
+name: Irrigation Advisory
+description: Irrigation methods and water management
+version: 1.0.0
+enabled: true
+
+skills:
+  irrigation_methods:
+    - drip_irrigation
+    - sprinkler_irrigation
+    - flood_irrigation
+    - micro_irrigation
+  
+  irrigation_planning:
+    - crop_water_requirement
+    - irrigation_frequency
+    - drought_management
+
+tools:
+  - irrigation_calculator
+  - water_requirement_database
+  - drought_management_guide
+
+prompts:
+  - advisory_prompts.md

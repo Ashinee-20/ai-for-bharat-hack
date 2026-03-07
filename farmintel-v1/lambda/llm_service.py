@@ -1,16 +1,138 @@
 """
-LLM Service with LLM Decision Router
+LLM Service with Skill-Aware Groq Integration
 Groq primary + AWS Bedrock fallback
+Uses skill taxonomy to guide LLM responses
 """
 
 import json
 import os
 import boto3
 import urllib3
+import yaml
 
 # AWS clients
 bedrock = boto3.client("bedrock-runtime", region_name="us-east-1")
 ssm = boto3.client("ssm", region_name="ap-south-1")
+
+# Skill definitions
+SKILLS = {
+    'crop_advisory': {
+        'name': 'Crop Advisory',
+        'keywords': ['crop', 'plant', 'seed', 'variety', 'yield', 'harvest', 'stage'],
+        'guidelines': '''
+You are providing Crop Advisory. Follow these guidelines:
+- Identify the specific crop first
+- Determine the crop lifecycle stage (seedling, vegetative, flowering, fruiting, maturation)
+- Provide stage-specific recommendations
+- Consider crop rotation and intercropping if relevant
+- Reference mandi prices and market trends when available
+- Suggest best practices for the identified crop
+'''
+    },
+    'soil_advisory': {
+        'name': 'Soil Advisory',
+        'keywords': ['soil', 'ph', 'nitrogen', 'phosphorus', 'potassium', 'nutrient', 'fertility', 'texture'],
+        'guidelines': '''
+You are providing Soil Advisory. Follow these guidelines:
+- Identify soil type and characteristics
+- Analyze nutrient deficiencies (NPK and micronutrients)
+- Provide pH correction recommendations
+- Suggest organic and chemical fertilizer options
+- Recommend soil health improvement practices
+- Consider soil conservation methods
+'''
+    },
+    'pest_advisory': {
+        'name': 'Pest Advisory',
+        'keywords': ['pest', 'insect', 'bug', 'aphid', 'whitefly', 'caterpillar', 'mite', 'borer'],
+        'guidelines': '''
+You are providing Pest Advisory. Follow these guidelines:
+- Identify the specific pest from symptoms
+- Determine pest lifecycle and damage potential
+- Recommend organic control methods first
+- Suggest chemical pesticides only if necessary
+- Provide integrated pest management (IPM) strategies
+- Include preventive measures
+'''
+    },
+    'disease_advisory': {
+        'name': 'Disease Advisory',
+        'keywords': ['disease', 'fungal', 'bacterial', 'viral', 'blight', 'rot', 'wilt', 'spot', 'leaf'],
+        'guidelines': '''
+You are providing Disease Advisory. Follow these guidelines:
+- Identify the disease from symptoms
+- Determine if it's fungal, bacterial, or viral
+- Recommend treatment options (fungicides, bactericides)
+- Suggest prevention and management strategies
+- Include crop rotation recommendations
+- Provide early warning signs
+'''
+    },
+    'weather_advisory': {
+        'name': 'Weather Advisory',
+        'keywords': ['weather', 'rain', 'temperature', 'humidity', 'wind', 'drought', 'flood', 'frost'],
+        'guidelines': '''
+You are providing Weather Advisory. Follow these guidelines:
+- Analyze current weather conditions
+- Identify weather-related risks (drought, flood, frost, heat stress)
+- Provide irrigation planning based on rainfall
+- Suggest planting and harvest timing
+- Include weather-based crop protection measures
+- Consider seasonal variations
+'''
+    },
+    'irrigation_advisory': {
+        'name': 'Irrigation Advisory',
+        'keywords': ['water', 'irrigation', 'drip', 'sprinkler', 'flood', 'moisture', 'drought'],
+        'guidelines': '''
+You are providing Irrigation Advisory. Follow these guidelines:
+- Calculate water requirements for the crop
+- Recommend irrigation methods (drip, sprinkler, flood)
+- Provide irrigation frequency and timing
+- Include drought management strategies
+- Suggest water conservation techniques
+- Consider soil moisture levels
+'''
+    },
+    'fertilizer_advisory': {
+        'name': 'Fertilizer Advisory',
+        'keywords': ['fertilizer', 'manure', 'compost', 'npk', 'nitrogen', 'phosphorus', 'potassium'],
+        'guidelines': '''
+You are providing Fertilizer Advisory. Follow these guidelines:
+- Recommend NPK ratios based on crop stage
+- Suggest organic fertilizers (compost, vermicompost, manure)
+- Include chemical fertilizer options with dosages
+- Provide application timing and methods
+- Consider soil nutrient status
+- Include micronutrient recommendations
+'''
+    },
+    'harvest_advisory': {
+        'name': 'Harvest Advisory',
+        'keywords': ['harvest', 'reap', 'gather', 'storage', 'post-harvest', 'processing'],
+        'guidelines': '''
+You are providing Harvest Advisory. Follow these guidelines:
+- Identify harvest maturity indicators
+- Recommend harvesting methods
+- Provide post-harvest handling guidelines
+- Suggest storage conditions and duration
+- Include value-addition opportunities
+- Recommend pest-free storage practices
+'''
+    }
+}
+
+# Crop categories for better routing
+CROP_CATEGORIES = {
+    'cereals': ['wheat', 'rice', 'maize', 'barley', 'millet', 'sorghum'],
+    'pulses': ['chickpea', 'lentil', 'pigeonpea', 'mungbean', 'uradbean'],
+    'vegetables': ['tomato', 'potato', 'onion', 'chilli', 'cabbage', 'cauliflower', 'brinjal'],
+    'fruits': ['mango', 'banana', 'citrus', 'apple', 'coconut', 'guava', 'papaya'],
+    'plantation': ['coffee', 'tea', 'rubber', 'cocoa'],
+    'medicinal': ['turmeric', 'ginger', 'ashwagandha', 'aloe', 'neem', 'stevia'],
+    'spices': ['pepper', 'cardamom', 'clove', 'cinnamon'],
+    'oilseeds': ['sunflower', 'mustard', 'sesame', 'castor']
+}
 
 # Models
 BEDROCK_MODEL = os.environ.get("BEDROCK_MODEL_ID", "us.amazon.nova-lite-v1:0")
@@ -20,6 +142,44 @@ GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
 http = urllib3.PoolManager()
 
 _groq_api_key_cache = None
+
+
+# -------------------------------
+# SKILL IDENTIFICATION
+# -------------------------------
+def identify_skill(query):
+    """
+    Identify which skill domain the query belongs to.
+    Returns skill name and guidelines.
+    """
+    query_lower = query.lower()
+    
+    # Score each skill based on keyword matches
+    skill_scores = {}
+    
+    for skill_name, skill_info in SKILLS.items():
+        keywords = skill_info.get('keywords', [])
+        matches = sum(1 for keyword in keywords if keyword in query_lower)
+        if matches > 0:
+            skill_scores[skill_name] = matches
+    
+    # Return the skill with highest score
+    if skill_scores:
+        best_skill = max(skill_scores, key=skill_scores.get)
+        print(f"[SKILL DETECTION] Query: {query}, Identified Skill: {best_skill}")
+        return best_skill
+    
+    print(f"[SKILL DETECTION] Query: {query}, No specific skill identified")
+    return None
+
+
+def get_skill_context(skill_name):
+    """
+    Get the guidelines for a specific skill.
+    """
+    if skill_name and skill_name in SKILLS:
+        return SKILLS[skill_name].get('guidelines', '')
+    return ''
 
 
 # -------------------------------
@@ -169,6 +329,15 @@ Rules:
         decision = json.loads(decision_text)
         print(f"[DEBUG] Parsed decision: {decision}")
 
+        # Identify skill for this query
+        skill = identify_skill(query)
+        decision['skill'] = skill
+        
+        # Get skill guidelines
+        if skill:
+            skill_context = get_skill_context(skill)
+            decision['skill_context'] = skill_context
+        
         return decision
 
     except json.JSONDecodeError as je:
@@ -177,7 +346,9 @@ Rules:
         return {
             "crop": None,
             "fetch_prices": False,
-            "fetch_insights": False
+            "fetch_insights": False,
+            "skill": None,
+            "skill_context": ""
         }
     except Exception as e:
         print(f"[ERROR] Router error: {e}")
@@ -187,7 +358,9 @@ Rules:
         return {
             "crop": None,
             "fetch_prices": False,
-            "fetch_insights": False
+            "fetch_insights": False,
+            "skill": None,
+            "skill_context": ""
         }
 
 
@@ -273,6 +446,10 @@ Help farmers with:
 
 Give short practical answers. Format prices as a markdown table when showing multiple prices.
 """
+
+    # Inject skill guidelines if available
+    if context.get('skill_context'):
+        system_prompt += "\n" + context.get('skill_context')
 
     user_prompt = f"User question: {query}\n\n"
 

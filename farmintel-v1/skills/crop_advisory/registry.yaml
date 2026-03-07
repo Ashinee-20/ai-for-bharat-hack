@@ -1,0 +1,80 @@
+# Crop Advisory Skill Registry
+
+skill:
+  name: "Crop Advisory"
+  version: "1.0.0"
+  description: "Comprehensive crop planning, lifecycle management, and variety selection"
+  
+  domains:
+    - crop_planning
+    - crop_lifecycle
+    - crop_selection
+    - crop_rotation
+    - intercropping
+  
+  supported_crops:
+    cereals:
+      - wheat
+      - rice
+      - maize
+      - barley
+      - millet
+      - sorghum
+    
+    pulses:
+      - chickpea
+      - lentil
+      - pigeonpea
+      - mungbean
+      - uradbean
+    
+    vegetables:
+      - tomato
+      - potato
+      - onion
+      - chilli
+      - cabbage
+      - cauliflower
+      - brinjal
+    
+    fruits:
+      - mango
+      - banana
+      - citrus
+      - apple
+      - coconut
+      - guava
+      - papaya
+    
+    oilseeds:
+      - sunflower
+      - mustard
+      - sesame
+      - castor
+  
+  tools_required:
+    - crop_lifecycle_database
+    - crop_yield_database
+    - crop_variety_selector
+    - crop_calendar
+    - intercropping_guide
+  
+  lifecycle_stages:
+    - germination_management
+    - seedling_management
+    - vegetative_stage_management
+    - flowering_stage_management
+    - fruiting_stage_management
+    - maturation_stage_management
+    - harvest_management
+  
+  knowledge_base:
+    - crop_requirements.json
+    - variety_data.json
+    - rotation_patterns.json
+    - intercropping_compatibility.json
+  
+  performance_metrics:
+    accuracy_target: 0.95
+    response_time_target_seconds: 3
+    user_satisfaction_target: 0.9
