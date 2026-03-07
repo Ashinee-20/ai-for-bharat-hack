@@ -193,15 +193,29 @@ async function getLLMResponse(query) {
         console.log('[FarmIntel] Switching to offline mode...');
         updateStatusIndicator('offline');
         
-        // Fall through to offline mode
+        // Try to use offline LLM model
         try {
-            const offlineResponse = getOfflineResponse(query);
-            console.log('[FarmIntel] Offline response generated successfully');
-            return offlineResponse;
+            if (isWebLLMAvailable()) {
+                console.log('[FarmIntel] Running local TinyLlama model...');
+                const offlineLLMResponse = await generateOfflineLLMResponse(query);
+                console.log('[FarmIntel] Offline LLM response generated');
+                return `<div>${offlineLLMResponse}</div>`;
+            } else {
+                console.log('[FarmIntel] WebLLM not available, using fallback responses');
+                const offlineResponse = getOfflineResponse(query);
+                return offlineResponse;
+            }
         } catch (offlineError) {
-            console.error('[FarmIntel] Offline response error:', offlineError);
-            return `<p><strong>Offline Mode</strong></p>
-                    <p>Unable to generate response. Please try a different question or reconnect to internet.</p>`;
+            console.error('[FarmIntel] Offline LLM error:', offlineError);
+            console.log('[FarmIntel] Falling back to template responses');
+            try {
+                const offlineResponse = getOfflineResponse(query);
+                return offlineResponse;
+            } catch (fallbackError) {
+                console.error('[FarmIntel] Fallback error:', fallbackError);
+                return `<p><strong>Offline Mode</strong></p>
+                        <p>Unable to generate response. Please try a different question or reconnect to internet.</p>`;
+            }
         }
     }
 }
