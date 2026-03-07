@@ -23,7 +23,8 @@ async function loadWebLLM() {
     if (!webllm) {
         try {
             console.log('[OfflineLLM] Importing WebLLM from CDN...');
-            webllm = await import('https://cdn.jsdelivr.net/npm/@mlc-ai/web-llm@0.2.46/dist/index.js');
+            const module = await import('https://cdn.jsdelivr.net/npm/@mlc-ai/web-llm@0.2.46/dist/webllm.min.js');
+            webllm = module.default;
             console.log('[OfflineLLM] WebLLM imported successfully');
             return true;
         } catch (error) {
