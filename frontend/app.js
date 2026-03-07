@@ -124,43 +124,67 @@ function toggleVoiceCall() {
 
 async function getLLMResponse(query) {
     try {
-        // Get conversation history for context
-        const conversationHistory = getConversationHistory();
+        const isOnline = navigator.onLine;
+        console.log('[FarmIntel] Online status:', isOnline);
         
-        const response = await fetch(`${API_BASE_URL}/api/llm/query?t=${Date.now()}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Cache-Control': 'no-cache, no-store, must-revalidate',
-                'Pragma': 'no-cache',
-                'Expires': '0'
-            },
-            body: JSON.stringify({
-                query: query,
-                language: 'en',
-                conversation_history: conversationHistory
-            })
-        });
-        
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+        if (isOnline) {
+            try {
+                console.log('[FarmIntel] Attempting online API call...');
+                const conversationHistory = getConversationHistory();
+                
+                const response = await fetch(`${API_BASE_URL}/api/llm/query?t=${Date.now()}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Cache-Control': 'no-cache, no-store, must-revalidate',
+                        'Pragma': 'no-cache',
+                        'Expires': '0'
+                    },
+                    body: JSON.stringify({
+                        query: query,
+                        language: 'en',
+                        conversation_history: conversationHistory
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                if (data.context) {
+                    offlineCache.saveContext(query, data.context);
+                }
+                
+                if (data.response) {
+                    const formattedResponse = parseMarkdown(data.response);
+                    updateStatusIndicator('online');
+                    return `<div>${formattedResponse}</div>`;
+                } else {
+                    return `<p>I can help you with crop prices, market insights, and farming advice. What would you like to know?</p>`;
+                }
+            } catch (onlineError) {
+                console.error('[FarmIntel] Online API failed:', onlineError);
+                console.log('[FarmIntel] Falling back to offline mode...');
+            }
         }
         
-        const data = await response.json();
+        console.log('[FarmIntel] Using offline mode...');
+        updateStatusIndicator('offline');
         
-        // Cache the response for offline use
-        if (data.context) {
-            offlineCache.saveContext(query, data.context);
+        try {
+            const offlineResponse = getOfflineResponse(query);
+            console.log('[FarmIntel] Offline response generated');
+            return offlineResponse;
+        } catch (offlineError) {
+            console.error('[FarmIntel] Offline error:', offlineError);
+            return `<p>Unable to generate response. Please try again or reconnect to internet.</p>`;
         }
         
-        if (data.response) {
-            const formattedResponse = parseMarkdown(data.response);
-            return `<div>${formattedResponse}</div>`;
-        } else {
-            return `<p>I can help you with crop prices, market insights, and farming advice. What would you like to know?</p>`;
-        }
     } catch (error) {
-        console.error('LLM API Error:', error);
+        console.error('[FarmIntel] LLM Error:', error);
+        updateStatusIndicator('offline');
         throw new Error('Failed to get AI response');
     }
 }
