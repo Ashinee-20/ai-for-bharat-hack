@@ -14,6 +14,8 @@ let engine = null;
 let modelLoaded = false;
 let modelLoading = false;
 
+console.log('[OfflineLLM] Script loaded, WebLLM available:', typeof webllm !== 'undefined');
+
 /**
  * Load the offline TinyLlama model
  */
@@ -35,6 +37,13 @@ async function loadOfflineModel() {
     try {
         modelLoading = true;
         console.log('[OfflineLLM] Loading TinyLlama offline model...');
+        
+        // Check if WebLLM is available
+        if (typeof webllm === 'undefined') {
+            throw new Error('WebLLM library not loaded');
+        }
+        
+        console.log('[OfflineLLM] WebLLM ready, creating engine...');
         
         // Create engine with TinyLlama model
         engine = await webllm.CreateMLCEngine(
@@ -108,18 +117,11 @@ Keep responses brief (2-3 sentences), practical, and specific to Indian agricult
 }
 
 /**
- * Check if WebLLM is available
- */
-function isWebLLMAvailable() {
-    return typeof webllm !== 'undefined';
-}
-
-/**
  * Get model status
  */
 function getModelStatus() {
     return {
-        available: isWebLLMAvailable(),
+        available: typeof webllm !== 'undefined',
         loaded: modelLoaded,
         loading: modelLoading
     };

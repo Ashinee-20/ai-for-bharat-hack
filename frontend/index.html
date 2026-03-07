@@ -88,12 +88,13 @@
         </div>
     </div>
 
-    <!-- WebLLM for offline LLM inference -->
+    <script src="offline-manager.js"></script>
+    <script src="model-download-manager.js"></script>
+    
+    <!-- WebLLM runtime - MUST load before offline-llm.js -->
     <script src="https://cdn.jsdelivr.net/npm/@mlc-ai/web-llm/dist/index.js"></script>
     
-    <script src="offline-manager.js"></script>
     <script src="offline-llm.js"></script>
-    <script src="model-download-manager.js"></script>
     <script src="app.js"></script>
     
     <!-- ElevenLabs ConvAI Widget -->
