@@ -2,7 +2,7 @@
  * FarmIntel Offline LLM Manager
  * Runs TinyLlama 1.1B model locally in browser using WebLLM
  * 
- * Uses dynamic ESM import to load WebLLM from CDN
+ * WebLLM loaded via CDN script tag
  * First load: ~20 seconds (model downloads from CDN)
  * Subsequent loads: Instant (cached in browser)
  * Inference time: 2-4 seconds per response
@@ -11,39 +11,35 @@
  * Works best on: Chrome, Edge, Brave (with WebGPU support)
  */
 
-let webllm = null;
 let engine = null;
 let modelLoaded = false;
 let modelLoading = false;
 
 /**
- * Dynamically import WebLLM from CDN
+ * Wait for WebLLM to be available globally
  */
-async function loadWebLLM() {
-    if (!webllm) {
-        try {
-            console.log('[OfflineLLM] Importing WebLLM from CDN...');
-            const module = await import('https://cdn.jsdelivr.net/npm/@mlc-ai/web-llm@0.2.46/dist/webllm.min.js');
-            webllm = module.default;
-            console.log('[OfflineLLM] WebLLM imported successfully');
-            return true;
-        } catch (error) {
-            console.error('[OfflineLLM] Failed to import WebLLM:', error);
-            return false;
+async function waitForWebLLM() {
+    let attempts = 0;
+    
+    while (typeof webllm === 'undefined') {
+        console.log('[OfflineLLM] Waiting for WebLLM... (attempt ' + (attempts + 1) + ')');
+        await new Promise(r => setTimeout(r, 200));
+        attempts++;
+        
+        if (attempts > 200) {
+            throw new Error('WebLLM failed to load after 40 seconds');
         }
     }
-    return true;
+    
+    console.log('[OfflineLLM] WebLLM loaded successfully');
 }
 
 /**
  * Load the offline TinyLlama model
  */
 async function loadOfflineModel() {
-    // Load WebLLM first
-    const webllmLoaded = await loadWebLLM();
-    if (!webllmLoaded) {
-        throw new Error('WebLLM failed to load');
-    }
+    // Wait for WebLLM to be available
+    await waitForWebLLM();
     
     if (modelLoaded) {
         console.log('[OfflineLLM] Model already loaded');
@@ -62,13 +58,6 @@ async function loadOfflineModel() {
     try {
         modelLoading = true;
         console.log('[OfflineLLM] Loading TinyLlama offline model...');
-        
-        // Check if WebLLM is available
-        if (!webllm || !webllm.CreateMLCEngine) {
-            throw new Error('WebLLM library not properly loaded');
-        }
-        
-        console.log('[OfflineLLM] WebLLM ready, creating engine...');
         
         // Create engine with TinyLlama model
         engine = await webllm.CreateMLCEngine(
@@ -146,7 +135,7 @@ Keep responses brief (2-3 sentences), practical, and specific to Indian agricult
  */
 function getModelStatus() {
     return {
-        available: webllm !== null,
+        available: typeof webllm !== 'undefined',
         loaded: modelLoaded,
         loading: modelLoading
     };
