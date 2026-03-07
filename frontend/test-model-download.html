@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FarmIntel Model Download - Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #10a37f;
+            margin-top: 0;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            background: #f9f9f9;
+            border-left: 4px solid #10a37f;
+            border-radius: 4px;
+        }
+        .test-section h3 {
+            margin-top: 0;
+            color: #333;
+        }
+        button {
+            background: #10a37f;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin: 5px 5px 5px 0;
+        }
+        button:hover {
+            background: #0d8659;
+        }
+        .output {
+            background: #f0f0f0;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+            margin-top: 10px;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        .success {
+            color: #10a37f;
+            font-weight: bold;
+        }
+        .error {
+            color: #ef4444;
+            font-weight: bold;
+        }
+        .info {
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 FarmIntel Model Download - Test Page</h1>
+        <p>Use this page to test if the model download system is working correctly.</p>
+
+        <div class="test-section">
+            <h3>1. Check Browser Support</h3>
+            <button onclick="testBrowserSupport()">Test Browser Support</button>
+            <div id="browserOutput" class="output"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>2. Check localStorage</h3>
+            <button onclick="testLocalStorage()">Test localStorage</button>
+            <div id="storageOutput" class="output"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>3. Check IndexedDB</h3>
+            <button onclick="testIndexedDB()">Test IndexedDB</button>
+            <div id="indexeddbOutput" class="output"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>4. Check Model Manager</h3>
+            <button onclick="testModelManager()">Test Model Manager</button>
+            <div id="managerOutput" class="output"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>5. Check Model Status</h3>
+            <button onclick="testModelStatus()">Check Model Status</button>
+            <div id="statusOutput" class="output"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>6. Show Popup</h3>
+            <button onclick="showPopup()">Show Download Popup</button>
+            <div id="popupOutput" class="output"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>7. Clear All Data</h3>
+            <button onclick="clearAllData()">Clear localStorage & IndexedDB</button>
+            <div id="clearOutput" class="output"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>8. Console Logs</h3>
+            <p>Open browser console (F12) to see detailed logs with [ModelDownload] prefix</p>
+            <button onclick="showConsoleLogs()">Show Console Instructions</button>
+            <div id="consoleOutput" class="output"></div>
+        </div>
+    </div>
+
+    <script src="model-download-manager.js"></script>
+    <script>
+        function log(elementId, message, type = 'info') {
+            const element = document.getElementById(elementId);
+            const timestamp = new Date().toLocaleTimeString();
+            const prefix = type === 'success' ? '✓' : type === 'error' ? '✗' : 'ℹ';
+            const className = type;
+            
+            const line = `[${timestamp}] ${prefix} ${message}`;
+            element.innerHTML += `<span class="${className}">${line}</span>\n`;
+            element.scrollTop = element.scrollHeight;
+        }
+
+        function testBrowserSupport() {
+            const output = 'browserOutput';
+            document.getElementById(output).innerHTML = '';
+            
+            log(output, 'Testing browser support...', 'info');
+            
+            const tests = {
+                'localStorage': typeof(Storage) !== 'undefined',
+                'IndexedDB': !!window.indexedDB,
+                'Fetch API': !!window.fetch,
+                'Blob': !!window.Blob,
+                'Promise': !!window.Promise,
+                'Service Worker': 'serviceWorker' in navigator
+            };
+            
+            let allSupported = true;
+            for (const [feature, supported] of Object.entries(tests)) {
+                const type = supported ? 'success' : 'error';
+                log(output, `${feature}: ${supported ? 'Supported' : 'Not Supported'}`, type);
+                if (!supported) allSupported = false;
+            }
+            
+            log(output, allSupported ? 'All features supported!' : 'Some features missing', allSupported ? 'success' : 'error');
+        }
+
+        function testLocalStorage() {
+            const output = 'storageOutput';
+            document.getElementById(output).innerHTML = '';
+            
+            try {
+                log(output, 'Testing localStorage...', 'info');
+                
+                // Test write
+                localStorage.setItem('test', 'value');
+                log(output, 'Write test: Success', 'success');
+                
+                // Test read
+                const value = localStorage.getItem('test');
+                log(output, `Read test: ${value}`, 'success');
+                
+                // Check model download flag
+                const modelFlag = localStorage.getItem('farmintel_model_downloaded');
+                log(output, `Model downloaded flag: ${modelFlag || 'not set'}`, 'info');
+                
+                // Check download progress
+                const progress = localStorage.getItem('farmintel_download_progress');
+                log(output, `Download progress: ${progress || 'not set'}`, 'info');
+                
+                // Cleanup
+                localStorage.removeItem('test');
+                log(output, 'localStorage is working correctly', 'success');
+            } catch (error) {
+                log(output, `Error: ${error.message}`, 'error');
+            }
+        }
+
+        function testIndexedDB() {
+            const output = 'indexeddbOutput';
+            document.getElementById(output).innerHTML = '';
+            
+            try {
+                log(output, 'Testing IndexedDB...', 'info');
+                
+                if (!window.indexedDB) {
+                    log(output, 'IndexedDB not available', 'error');
+                    return;
+                }
+                
+                log(output, 'IndexedDB available', 'success');
+                
+                // Try to open database
+                const request = indexedDB.open('FarmIntelDB');
+                
+                request.onerror = () => {
+                    log(output, `Error opening database: ${request.error}`, 'error');
+                };
+                
+                request.onsuccess = () => {
+                    const db = request.result;
+                    log(output, 'Database opened successfully', 'success');
+                    log(output, `Object stores: ${Array.from(db.objectStoreNames).join(', ') || 'none'}`, 'info');
+                    db.close();
+                };
+            } catch (error) {
+                log(output, `Error: ${error.message}`, 'error');
+            }
+        }
+
+        function testModelManager() {
+            const output = 'managerOutput';
+            document.getElementById(output).innerHTML = '';
+            
+            try {
+                log(output, 'Testing Model Manager...', 'info');
+                
+                if (typeof modelDownloadManager === 'undefined') {
+                    log(output, 'Model manager not loaded', 'error');
+                    return;
+                }
+                
+                log(output, 'Model manager loaded', 'success');
+                log(output, `Model name: ${modelDownloadManager.MODEL_NAME}`, 'info');
+                log(output, `Model size: ${(modelDownloadManager.MODEL_SIZE / 1024 / 1024).toFixed(0)} MB`, 'info');
+                log(output, `Model URL: ${modelDownloadManager.MODEL_URL.substring(0, 50)}...`, 'info');
+                log(output, 'Model manager is ready', 'success');
+            } catch (error) {
+                log(output, `Error: ${error.message}`, 'error');
+            }
+        }
+
+        async function testModelStatus() {
+            const output = 'statusOutput';
+            document.getElementById(output).innerHTML = '';
+            
+            try {
+                log(output, 'Checking model status...', 'info');
+                
+                if (typeof modelDownloadManager === 'undefined') {
+                    log(output, 'Model manager not loaded', 'error');
+                    return;
+                }
+                
+                const isDownloaded = await modelDownloadManager.isModelDownloaded();
+                log(output, `Model downloaded: ${isDownloaded}`, isDownloaded ? 'success' : 'info');
+                
+                if (isDownloaded) {
+                    log(output, 'Model is ready to use', 'success');
+                } else {
+                    log(output, 'Model needs to be downloaded', 'info');
+                }
+            } catch (error) {
+                log(output, `Error: ${error.message}`, 'error');
+            }
+        }
+
+        function showPopup() {
+            const output = 'popupOutput';
+            document.getElementById(output).innerHTML = '';
+            
+            try {
+                log(output, 'Showing download popup...', 'info');
+                
+                if (typeof modelDownloadManager === 'undefined') {
+                    log(output, 'Model manager not loaded', 'error');
+                    return;
+                }
+                
+                modelDownloadManager.showDownloadPopup();
+                log(output, 'Popup should appear now', 'success');
+            } catch (error) {
+                log(output, `Error: ${error.message}`, 'error');
+            }
+        }
+
+        function clearAllData() {
+            const output = 'clearOutput';
+            document.getElementById(output).innerHTML = '';
+            
+            try {
+                log(output, 'Clearing all data...', 'info');
+                
+                // Clear localStorage
+                localStorage.removeItem('farmintel_model_downloaded');
+                localStorage.removeItem('farmintel_download_progress');
+                log(output, 'localStorage cleared', 'success');
+                
+                // Clear IndexedDB
+                if (window.indexedDB) {
+                    const deleteRequest = indexedDB.deleteDatabase('FarmIntelDB');
+                    deleteRequest.onsuccess = () => {
+                        log(output, 'IndexedDB cleared', 'success');
+                        log(output, 'All data cleared. Refresh page to see popup again.', 'success');
+                    };
+                    deleteRequest.onerror = () => {
+                        log(output, 'Error clearing IndexedDB', 'error');
+                    };
+                }
+            } catch (error) {
+                log(output, `Error: ${error.message}`, 'error');
+            }
+        }
+
+        function showConsoleLogs() {
+            const output = 'consoleOutput';
+            document.getElementById(output).innerHTML = '';
+            
+            log(output, 'To see detailed logs:', 'info');
+            log(output, '1. Press F12 to open browser console', 'info');
+            log(output, '2. Look for messages starting with [ModelDownload]', 'info');
+            log(output, '3. These logs show exactly what is happening', 'info');
+            log(output, '', 'info');
+            log(output, 'Example logs you should see:', 'info');
+            log(output, '[ModelDownload] Checking if model is downloaded...', 'info');
+            log(output, '[ModelDownload] Model downloaded: false', 'info');
+            log(output, '[ModelDownload] Showing download popup...', 'info');
+            log(output, '', 'info');
+            log(output, 'If you see errors, they will be in red', 'error');
+        }
+
+        // Run initial tests on page load
+        window.addEventListener('load', () => {
+            console.log('[ModelDownload] Test page loaded');
+            log('browserOutput', 'Page loaded. Click buttons to run tests.', 'info');
+        });
+    </script>
+</body>
+</html>
