@@ -17,7 +17,32 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeApp();
     setupEventListeners();
     registerServiceWorker();
+    setupNetworkListener();
 });
+
+function setupNetworkListener() {
+    /**
+     * Listen for online/offline events
+     */
+    window.addEventListener('online', () => {
+        console.log('[FarmIntel] Network status: ONLINE');
+        updateStatusIndicator('online');
+        addMessage('🟢 You are back online!', 'bot');
+    });
+    
+    window.addEventListener('offline', () => {
+        console.log('[FarmIntel] Network status: OFFLINE');
+        updateStatusIndicator('offline');
+        addMessage('🔴 You are now offline. Using local model for responses.', 'bot');
+    });
+    
+    // Set initial status
+    if (navigator.onLine) {
+        updateStatusIndicator('online');
+    } else {
+        updateStatusIndicator('offline');
+    }
+}
 
 function initializeApp() {
     // Check if we need to clear corrupted chat history
@@ -124,43 +149,81 @@ function toggleVoiceCall() {
 
 async function getLLMResponse(query) {
     try {
-        // Get conversation history for context
-        const conversationHistory = getConversationHistory();
+        // Check if online
+        const isOnline = navigator.onLine;
+        console.log('[FarmIntel] Online status:', isOnline);
         
-        const response = await fetch(`${API_BASE_URL}/api/llm/query?t=${Date.now()}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Cache-Control': 'no-cache, no-store, must-revalidate',
-                'Pragma': 'no-cache',
-                'Expires': '0'
-            },
-            body: JSON.stringify({
-                query: query,
-                language: 'en',
-                conversation_history: conversationHistory
-            })
-        });
-        
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+        if (isOnline) {
+            // Try online API first
+            try {
+                console.log('[FarmIntel] Attempting online API call...');
+                const conversationHistory = getConversationHistory();
+                
+                const response = await fetch(`${API_BASE_URL}/api/llm/query?t=${Date.now()}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Cache-Control': 'no-cache, no-store, must-revalidate',
+                        'Pragma': 'no-cache',
+                        'Expires': '0'
+                    },
+                    body: JSON.stringify({
+                        query: query,
+                        language: 'en',
+                        conversation_history: conversationHistory
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                // Cache the response for offline use
+                if (data.context) {
+                    offlineCache.saveContext(query, data.context);
+                }
+                
+                if (data.response) {
+                    const formattedResponse = parseMarkdown(data.response);
+                    updateStatusIndicator('online');
+                    return `<div>${formattedResponse}</div>`;
+                } else {
+                    return `<p>I can help you with crop prices, market insights, and farming advice. What would you like to know?</p>`;
+                }
+            } catch (onlineError) {
+                console.error('[FarmIntel] Online API failed:', onlineError);
+                // Fall through to offline mode
+                console.log('[FarmIntel] Falling back to offline mode...');
+            }
         }
         
-        const data = await response.json();
+        // Offline mode - use local model
+        console.log('[FarmIntel] Using offline mode...');
+        updateStatusIndicator('offline');
         
-        // Cache the response for offline use
-        if (data.context) {
-            offlineCache.saveContext(query, data.context);
+        // Check if model is downloaded
+        const isModelDownloaded = await modelDownloadManager.isModelDownloaded();
+        console.log('[FarmIntel] Model downloaded:', isModelDownloaded);
+        
+        if (!isModelDownloaded) {
+            return `<p><strong>Offline Mode - Model Not Downloaded</strong></p>
+                    <p>The offline model hasn't been downloaded yet. Please:</p>
+                    <ol>
+                        <li>Connect to the internet</li>
+                        <li>Download the offline model from the popup</li>
+                        <li>Then you can use offline mode</li>
+                    </ol>`;
         }
         
-        if (data.response) {
-            const formattedResponse = parseMarkdown(data.response);
-            return `<div>${formattedResponse}</div>`;
-        } else {
-            return `<p>I can help you with crop prices, market insights, and farming advice. What would you like to know?</p>`;
-        }
+        // Use offline response generator
+        const offlineResponse = getOfflineResponse(query);
+        return offlineResponse;
+        
     } catch (error) {
-        console.error('LLM API Error:', error);
+        console.error('[FarmIntel] LLM Error:', error);
+        updateStatusIndicator('offline');
         throw new Error('Failed to get AI response');
     }
 }
@@ -369,23 +432,20 @@ function updateStatusIndicator(mode) {
     /**
      * Update UI status indicator
      */
-    const header = document.querySelector('.app-header');
-    if (!header) return;
-    
-    let indicator = document.getElementById('statusIndicator');
+    const indicator = document.getElementById('statusIndicator');
     if (!indicator) {
-        indicator = document.createElement('div');
-        indicator.id = 'statusIndicator';
-        indicator.style.cssText = 'position: absolute; right: 100px; top: 50%; transform: translateY(-50%); font-size: 12px; padding: 4px 8px; border-radius: 4px; background: rgba(0,0,0,0.1);';
-        header.querySelector('.header-content').appendChild(indicator);
+        console.warn('[FarmIntel] Status indicator not found');
+        return;
     }
     
     if (mode === 'online') {
         indicator.innerHTML = '🟢 Online';
         indicator.style.color = '#10a37f';
-    } else {
+        console.log('[FarmIntel] Status updated to: Online');
+    } else if (mode === 'offline') {
         indicator.innerHTML = '🔴 Offline';
         indicator.style.color = '#ef4444';
+        console.log('[FarmIntel] Status updated to: Offline');
     }
 }
 
