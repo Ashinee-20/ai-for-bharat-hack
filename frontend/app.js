@@ -267,117 +267,118 @@ function generatePriceResponse(crop) {
         return "Please specify which crop you're asking about (e.g., wheat, rice, tomato).";
     }
     
-    const cached = offlineCache.get(crop);
-    if (cached && cached.prices) {
-        let response = `**Cached Mandi Prices for ${crop.charAt(0).toUpperCase() + crop.slice(1)}**\n\n`;
-        response += "| Mandi | Price (₹) | State |\n";
-        response += "|-------|-----------|-------|\n";
-        
-        cached.prices.slice(0, 5).forEach(price => {
-            response += `| ${price.mandi} | ${price.price} | ${price.state} |\n`;
-        });
-        
-        response += `\n*Last updated: ${cached.prices[0].date}*\n`;
-        response += "*Note: This is cached data. Connect to internet for real-time prices.*";
-        return response;
-    }
-    
-    return `No cached price data available for ${crop}. Please connect to internet for latest prices.`;
+    // Simple offline response - don't try to access cache
+    return `<strong>Offline Mode - Price Information</strong><br><br>
+            For ${crop.charAt(0).toUpperCase() + crop.slice(1)}:<br><br>
+            <strong>General Price Range:</strong><br>
+            • Typical market price: ₹2,000 - ₹3,000 per quintal<br>
+            • Varies by location, quality, and season<br><br>
+            <strong>To get real-time prices:</strong><br>
+            • Connect to internet for live mandi prices<br>
+            • Check local agricultural markets<br>
+            • Contact your nearest mandi directly<br><br>
+            <em>Note: For accurate current prices, please go online.</em>`;
 }
 
 function generateWeatherResponse() {
-    return `**Weather Advisory (Offline Mode)**\n\n` +
-        `Since I'm offline, I can't provide real-time weather data.\n\n` +
-        `**What you can do:**\n` +
-        `1. Check local weather forecast\n` +
-        `2. Ask: What is the current temperature?\n` +
-        `3. Ask: Is rainfall expected?\n\n` +
-        `**General Tips:**\n` +
-        `- Most crops need 20-30°C temperature\n` +
-        `- Avoid planting during extreme heat or cold\n` +
-        `- Monitor rainfall for irrigation planning`;
+    return `<strong>Weather Advisory (Offline Mode)</strong><br><br>
+            Since I'm offline, I can't provide real-time weather data.<br><br>
+            <strong>General Tips:</strong><br>
+            • Most crops need 20-30°C temperature<br>
+            • Avoid planting during extreme heat or cold<br>
+            • Monitor rainfall for irrigation planning<br><br>
+            <strong>For real-time weather:</strong><br>
+            • Connect to internet for live weather data<br>
+            • Check local weather forecasts<br>
+            • Monitor rainfall patterns`;
 }
 
 function generateSoilResponse() {
-    return `**Soil Advisory (Offline Mode)**\n\n` +
-        `**Common Soil Issues & Solutions:**\n\n` +
-        `**Acidic Soil (pH < 6.5):**\n` +
-        `- Add lime or wood ash (2-3 tons/hectare)\n\n` +
-        `**Alkaline Soil (pH > 8.0):**\n` +
-        `- Add sulfur or gypsum (1-2 tons/hectare)\n\n` +
-        `**Low Nitrogen:**\n` +
-        `- Add compost or manure (5-10 tons/hectare)\n\n` +
-        `**For accurate soil testing, connect to internet for lab recommendations.**`;
+    return `<strong>Soil Advisory (Offline Mode)</strong><br><br>
+            <strong>Common Soil Issues & Solutions:</strong><br><br>
+            <strong>Acidic Soil (pH &lt; 6.5):</strong><br>
+            • Add lime or wood ash (2-3 tons/hectare)<br><br>
+            <strong>Alkaline Soil (pH &gt; 8.0):</strong><br>
+            • Add sulfur or gypsum (1-2 tons/hectare)<br><br>
+            <strong>Low Nitrogen:</strong><br>
+            • Add compost or manure (5-10 tons/hectare)<br><br>
+            <strong>For accurate soil testing:</strong><br>
+            • Connect to internet for lab recommendations<br>
+            • Contact local agricultural extension office`;
 }
 
 function generatePestResponse() {
-    return `**Pest Management (Offline Mode)**\n\n` +
-        `**Common Pests & Organic Control:**\n\n` +
-        `**Aphids:** Spray neem oil (3%) or use soap spray\n` +
-        `**Whiteflies:** Yellow sticky traps or neem spray\n` +
-        `**Caterpillars:** Hand-pick or use Bt spray\n` +
-        `**Mites:** Sulfur dust or neem oil spray\n\n` +
-        `*For chemical pesticides, connect to internet for recommendations.*`;
+    return `<strong>Pest Management (Offline Mode)</strong><br><br>
+            <strong>Common Pests & Organic Control:</strong><br><br>
+            <strong>Aphids:</strong> Spray neem oil (3%) or use soap spray<br>
+            <strong>Whiteflies:</strong> Yellow sticky traps or neem spray<br>
+            <strong>Caterpillars:</strong> Hand-pick or use Bt spray<br>
+            <strong>Mites:</strong> Sulfur dust or neem oil spray<br><br>
+            <strong>For chemical pesticides:</strong><br>
+            • Connect to internet for recommendations<br>
+            • Consult local agricultural expert`;
 }
 
 function generateDiseaseResponse() {
-    return `**Disease Management (Offline Mode)**\n\n` +
-        `**Common Symptoms & Prevention:**\n\n` +
-        `**Yellow Leaves:** Could be nitrogen deficiency or fungal disease\n` +
-        `**Brown Spots:** Likely fungal infection - remove affected parts\n` +
-        `**Wilting:** Check soil moisture, could be root rot\n\n` +
-        `**Prevention:**\n` +
-        `- Crop rotation\n` +
-        `- Remove infected plants\n` +
-        `- Maintain proper spacing`;
+    return `<strong>Disease Management (Offline Mode)</strong><br><br>
+            <strong>Common Symptoms & Prevention:</strong><br><br>
+            <strong>Yellow Leaves:</strong> Could be nitrogen deficiency or fungal disease<br>
+            <strong>Brown Spots:</strong> Likely fungal infection - remove affected parts<br>
+            <strong>Wilting:</strong> Check soil moisture, could be root rot<br><br>
+            <strong>Prevention:</strong><br>
+            • Crop rotation<br>
+            • Remove infected plants<br>
+            • Maintain proper spacing`;
 }
 
 function generateIrrigationResponse() {
-    return `**Irrigation Advisory (Offline Mode)**\n\n` +
-        `**General Water Requirements:**\n` +
-        `- Cereals: 40-60 cm per season\n` +
-        `- Vegetables: 30-50 cm per season\n` +
-        `- Fruits: 60-100 cm per season\n\n` +
-        `**Irrigation Frequency:**\n` +
-        `- Summer: Every 7-10 days\n` +
-        `- Winter: Every 15-20 days\n\n` +
-        `**Check soil moisture:** Squeeze soil - if it crumbles, water needed`;
+    return `<strong>Irrigation Advisory (Offline Mode)</strong><br><br>
+            <strong>General Water Requirements:</strong><br>
+            • Cereals: 40-60 cm per season<br>
+            • Vegetables: 30-50 cm per season<br>
+            • Fruits: 60-100 cm per season<br><br>
+            <strong>Irrigation Frequency:</strong><br>
+            • Summer: Every 7-10 days<br>
+            • Winter: Every 15-20 days<br><br>
+            <strong>Check soil moisture:</strong><br>
+            • Squeeze soil - if it crumbles, water needed`;
 }
 
 function generateFertilizerResponse() {
-    return `**Fertilizer Advisory (Offline Mode)**\n\n` +
-        `**Organic Fertilizers:**\n` +
-        `- Compost: 5-10 tons/hectare\n` +
-        `- Vermicompost: 2-5 tons/hectare\n` +
-        `- Cow Manure: 10-15 tons/hectare\n\n` +
-        `**NPK Ratios by Stage:**\n` +
-        `- Pre-planting: 10:26:26 (high phosphorus)\n` +
-        `- Vegetative: 20:20:20 (balanced)\n` +
-        `- Flowering: 10:52:10 (high phosphorus)\n` +
-        `- Fruiting: 10:10:40 (high potassium)`;
+    return `<strong>Fertilizer Advisory (Offline Mode)</strong><br><br>
+            <strong>Organic Fertilizers:</strong><br>
+            • Compost: 5-10 tons/hectare<br>
+            • Vermicompost: 2-5 tons/hectare<br>
+            • Cow Manure: 10-15 tons/hectare<br><br>
+            <strong>NPK Ratios by Stage:</strong><br>
+            • Pre-planting: 10:26:26 (high phosphorus)<br>
+            • Vegetative: 20:20:20 (balanced)<br>
+            • Flowering: 10:52:10 (high phosphorus)<br>
+            • Fruiting: 10:10:40 (high potassium)`;
 }
 
 function generateHarvestResponse() {
-    return `**Harvest Advisory (Offline Mode)**\n\n` +
-        `**General Harvest Indicators:**\n` +
-        `- Cereals: When grain is hard and doesn't dent\n` +
-        `- Vegetables: Pick at proper maturity\n` +
-        `- Fruits: When fully colored and slightly soft\n\n` +
-        `**Post-Harvest Storage:**\n` +
-        `- Dry grains to 12-14% moisture\n` +
-        `- Store in cool, dry place\n` +
-        `- Use airtight containers`;
+    return `<strong>Harvest Advisory (Offline Mode)</strong><br><br>
+            <strong>General Harvest Indicators:</strong><br>
+            • Cereals: When grain is hard and doesn't dent<br>
+            • Vegetables: Pick at proper maturity<br>
+            • Fruits: When fully colored and slightly soft<br><br>
+            <strong>Post-Harvest Storage:</strong><br>
+            • Dry grains to 12-14% moisture<br>
+            • Store in cool, dry place<br>
+            • Use airtight containers`;
 }
 
 function generateGeneralResponse() {
-    return `**General Agricultural Advice (Offline Mode)**\n\n` +
-        `I'm currently in offline mode with limited capabilities.\n\n` +
-        `**What I can help with offline:**\n` +
-        `- Cached crop prices\n` +
-        `- General farming tips\n` +
-        `- Pest and disease management\n` +
-        `- Soil and irrigation advice\n\n` +
-        `**For real-time data, please connect to internet.**`;
+    return `<strong>General Agricultural Advice (Offline Mode)</strong><br><br>
+            I'm currently in offline mode with limited capabilities.<br><br>
+            <strong>What I can help with offline:</strong><br>
+            • General farming tips<br>
+            • Pest and disease management<br>
+            • Soil and irrigation advice<br>
+            • Harvest guidance<br><br>
+            <strong>For real-time data:</strong><br>
+            • Connect to internet for live prices and insights`;
 }
 
 function cacheResponseData(query, context) {
