@@ -163,11 +163,15 @@ function toggleOfflineMode() {
         updateStatusIndicator('offline');
         addMessage('🔴 Switched to offline mode. Using local TinyLlama model.', 'bot');
         
-        // Show model download popup if model not loaded
-        if (!getModelStatus().loaded) {
-            console.log('[FarmIntel] Showing model download popup');
-            modelDownloadManager.showDownloadPopup();
-        }
+        // Show model download popup ONLY if model not already downloaded
+        modelDownloadManager.isModelDownloaded().then(isDownloaded => {
+            if (!isDownloaded) {
+                console.log('[FarmIntel] Model not downloaded, showing popup');
+                modelDownloadManager.showDownloadPopup();
+            } else {
+                console.log('[FarmIntel] Model already downloaded, skipping popup');
+            }
+        });
     } else {
         console.log('[FarmIntel] Switched to ONLINE mode');
         modeToggleButton.classList.remove('offline');

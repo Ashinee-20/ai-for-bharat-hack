@@ -2,7 +2,7 @@
  * FarmIntel Offline LLM Manager
  * Runs TinyLlama 1.1B model locally in browser using WebLLM
  * 
- * WebLLM loaded via CDN script tag
+ * WebLLM loaded via CDN script tag in index.html
  * First load: ~20 seconds (model downloads from CDN)
  * Subsequent loads: Instant (cached in browser)
  * Inference time: 2-4 seconds per response
@@ -16,31 +16,9 @@ let modelLoaded = false;
 let modelLoading = false;
 
 /**
- * Wait for WebLLM to be available globally
- */
-async function waitForWebLLM() {
-    let attempts = 0;
-    
-    while (typeof webllm === 'undefined') {
-        console.log('[OfflineLLM] Waiting for WebLLM... (attempt ' + (attempts + 1) + ')');
-        await new Promise(r => setTimeout(r, 200));
-        attempts++;
-        
-        if (attempts > 200) {
-            throw new Error('WebLLM failed to load after 40 seconds');
-        }
-    }
-    
-    console.log('[OfflineLLM] WebLLM loaded successfully');
-}
-
-/**
  * Load the offline TinyLlama model
  */
 async function loadOfflineModel() {
-    // Wait for WebLLM to be available
-    await waitForWebLLM();
-    
     if (modelLoaded) {
         console.log('[OfflineLLM] Model already loaded');
         return;
@@ -58,6 +36,13 @@ async function loadOfflineModel() {
     try {
         modelLoading = true;
         console.log('[OfflineLLM] Loading TinyLlama offline model...');
+        
+        // Check if WebLLM is available
+        if (typeof webllm === 'undefined') {
+            throw new Error('WebLLM library not loaded. Make sure the CDN script is loaded.');
+        }
+        
+        console.log('[OfflineLLM] WebLLM available, creating engine...');
         
         // Create engine with TinyLlama model
         engine = await webllm.CreateMLCEngine(
@@ -141,8 +126,12 @@ function getModelStatus() {
     };
 }
 
+// Log when script loads
+console.log('[OfflineLLM] Script loaded');
+console.log('[OfflineLLM] WebLLM available:', typeof webllm !== 'undefined');
+
 // Start preloading the model when this script loads
-console.log('[OfflineLLM] Script loaded, starting WebLLM preload...');
+console.log('[OfflineLLM] Starting model preload...');
 loadOfflineModel().catch(err => {
     console.log('[OfflineLLM] Preload failed (will retry on first query):', err.message);
 });
