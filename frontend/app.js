@@ -152,65 +152,22 @@ function toggleVoiceCall() {
 }
 
 function toggleOfflineMode() {
-    // Check if WebLLM is available
-    if (typeof window.webllm === 'undefined') {
-        addMessage('❌ Offline mode not available - WebLLM library failed to load from CDN. Please check your internet connection and refresh the page.', 'bot', true);
-        return;
-    }
-    
-    forceOfflineMode = !forceOfflineMode;
-    const modeToggleButton = document.getElementById('modeToggleButton');
-    const modeToggleText = document.getElementById('modeToggleText');
-    
-    if (forceOfflineMode) {
-        console.log('[FarmIntel] Switched to OFFLINE mode');
-        modeToggleButton.classList.add('offline');
-        modeToggleText.textContent = '🔴 Offline';
-        updateStatusIndicator('offline');
-        
-        // Show appropriate message based on model status
-        if (getModelStatus().loaded) {
-            addMessage('🔴 Switched to offline mode. Using local TinyLlama model.', 'bot');
-        } else if (getModelStatus().loading) {
-            addMessage('🔴 Switched to offline mode. ⏳ Model is loading... (this may take 15-25 seconds on first run)', 'bot');
-        } else {
-            addMessage('🔴 Switched to offline mode. ⏳ Starting model download...', 'bot');
-        }
-        
-        // Show model download popup ONLY if model not already downloaded
-        modelDownloadManager.isModelDownloaded().then(isDownloaded => {
-            if (!isDownloaded) {
-                console.log('[FarmIntel] Model not downloaded, showing popup');
-                modelDownloadManager.showDownloadPopup();
-            } else {
-                console.log('[FarmIntel] Model already downloaded, skipping popup');
-            }
-        });
-    } else {
-        console.log('[FarmIntel] Switched to ONLINE mode');
-        modeToggleButton.classList.remove('offline');
-        modeToggleText.textContent = '🟢 Online';
-        updateStatusIndicator('online');
-        addMessage('🟢 Switched to online mode. Using cloud API.', 'bot');
-    }
+    // Offline mode disabled for now - focusing on online API
+    addMessage('⚠️ Offline mode is disabled. Please ensure you have internet connection.', 'bot');
 }
 
 async function getLLMResponse(query) {
     try {
-        // If user forced offline mode, skip API and go straight to offline
-        if (forceOfflineMode) {
-            console.log('[FarmIntel] Forced offline mode - skipping API call');
-            updateStatusIndicator('offline');
-            throw new Error('Forced offline mode');
-        }
-        
-        console.log('[FarmIntel] Attempting online API call...');
+        console.log('[FarmIntel] Attempting online API call to:', API_BASE_URL);
         
         const conversationHistory = getConversationHistory();
         
         // Use AbortController for timeout
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+        const timeoutId = setTimeout(() => {
+            console.log('[FarmIntel] API request timeout (15 seconds)');
+            controller.abort();
+        }, 15000);
         
         const response = await fetch(`${API_BASE_URL}/api/llm/query?t=${Date.now()}`, {
             method: 'POST',
@@ -229,6 +186,8 @@ async function getLLMResponse(query) {
         });
         
         clearTimeout(timeoutId);
+        
+        console.log('[FarmIntel] API response received:', response.status);
         
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
@@ -251,78 +210,13 @@ async function getLLMResponse(query) {
         
     } catch (error) {
         console.error('[FarmIntel] API call failed:', error.message);
-        console.log('[FarmIntel] Switching to offline mode...');
+        console.error('[FarmIntel] Error type:', error.name);
         updateStatusIndicator('offline');
         
-        // Check if WebLLM is available
-        if (typeof window.webllm === 'undefined') {
-            console.error('[FarmIntel] WebLLM not available, cannot use offline mode');
-            try {
-                const offlineResponse = getOfflineResponse(query);
-                return offlineResponse;
-            } catch (fallbackError) {
-                console.error('[FarmIntel] Fallback error:', fallbackError);
-                return `<p><strong>⚠️ Connection Error</strong></p>
-                        <p>Unable to reach the server and offline mode is not available. Please check your internet connection.</p>`;
-            }
-        }
-        
-        // Try to use offline LLM model
-        try {
-            console.log('[FarmIntel] Running local TinyLlama model...');
-            
-            // Create a message element for streaming response
-            const messageDiv = document.createElement('div');
-            messageDiv.className = 'message bot-message';
-            
-            const avatarDiv = document.createElement('div');
-            avatarDiv.className = 'message-avatar';
-            avatarDiv.textContent = 'AI';
-            
-            const contentDiv = document.createElement('div');
-            contentDiv.className = 'message-content';
-            contentDiv.textContent = '';  // Start empty
-            
-            messageDiv.appendChild(avatarDiv);
-            messageDiv.appendChild(contentDiv);
-            chatContainer.appendChild(messageDiv);
-            chatContainer.scrollTop = chatContainer.scrollHeight;
-            
-            // Check if model is loading
-            const modelStatus = getModelStatus();
-            if (modelStatus.loading) {
-                contentDiv.innerHTML = '<em style="color: var(--text-secondary);">⏳ Loading offline model (first time only)...</em>';
-                chatContainer.scrollTop = chatContainer.scrollHeight;
-            }
-            
-            // Stream tokens as they arrive
-            const offlineLLMResponse = await generateOfflineLLMResponse(query, (token) => {
-                // Replace loading message with actual response
-                if (contentDiv.textContent.includes('Loading offline model')) {
-                    contentDiv.textContent = '';
-                }
-                contentDiv.textContent += token;
-                chatContainer.scrollTop = chatContainer.scrollHeight;
-            });
-            
-            console.log('[FarmIntel] Offline LLM response generated');
-            
-            // Save to chat history
-            saveChatHistory();
-            
-            return '';  // Return empty since we already added the message
-        } catch (offlineError) {
-            console.error('[FarmIntel] Offline LLM error:', offlineError);
-            console.log('[FarmIntel] Local model unavailable, using fallback responses');
-            try {
-                const offlineResponse = getOfflineResponse(query);
-                return offlineResponse;
-            } catch (fallbackError) {
-                console.error('[FarmIntel] Fallback error:', fallbackError);
-                return `<p><strong>Offline Mode</strong></p>
-                        <p>Unable to generate response. Please try a different question or reconnect to internet.</p>`;
-            }
-        }
+        // For now, just show error - offline mode disabled for testing
+        return `<p><strong>⚠️ Connection Error</strong></p>
+                <p>Unable to reach the server. Error: ${error.message}</p>
+                <p>Please check your internet connection and try again.</p>`;
     }
 }
 
