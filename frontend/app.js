@@ -269,8 +269,19 @@ async function getLLMResponse(query) {
             chatContainer.appendChild(messageDiv);
             chatContainer.scrollTop = chatContainer.scrollHeight;
             
+            // Check if model is loading
+            const modelStatus = getModelStatus();
+            if (modelStatus.loading) {
+                contentDiv.innerHTML = '<em style="color: var(--text-secondary);">⏳ Loading offline model (first time only)...</em>';
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+            }
+            
             // Stream tokens as they arrive
             const offlineLLMResponse = await generateOfflineLLMResponse(query, (token) => {
+                // Replace loading message with actual response
+                if (contentDiv.textContent.includes('Loading offline model')) {
+                    contentDiv.textContent = '';
+                }
                 contentDiv.textContent += token;
                 chatContainer.scrollTop = chatContainer.scrollHeight;
             });

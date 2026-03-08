@@ -95,12 +95,8 @@
     <script src="offline-manager.js"></script>
     <script src="model-download-manager.js"></script>
     
-    <!-- WebLLM ES Module - exposes to window.webllm -->
-    <script type="module">
-        import * as webllm from "https://esm.run/@mlc-ai/web-llm";
-        window.webllm = webllm;
-        console.log("WebLLM module loaded");
-    </script>
+    <!-- WebLLM Library - Official CDN (most stable) -->
+    <script src="https://unpkg.com/@mlc-ai/web-llm@0.2.46/dist/webllm.js"></script>
     
     <script src="offline-llm.js"></script>
     <script src="app.js"></script>

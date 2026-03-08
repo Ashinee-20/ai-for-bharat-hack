@@ -481,6 +481,20 @@ body {
     }
 }
 
+/* Buffering Animation */
+@keyframes buffering {
+    0%, 100% {
+        opacity: 0.6;
+    }
+    50% {
+        opacity: 1;
+    }
+}
+
+.buffering {
+    animation: buffering 1.5s ease-in-out infinite;
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
     .app-header {

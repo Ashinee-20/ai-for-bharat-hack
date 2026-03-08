@@ -76,8 +76,17 @@ async function generateOfflineLLMResponse(query, onToken = null) {
     try {
         if (!modelLoaded) {
             console.log('[OfflineLLM] Waiting for model to finish loading...');
-            while (!modelLoaded) {
+            let waitCount = 0;
+            while (!modelLoaded && waitCount < 120) {  // 60 seconds max wait
                 await new Promise(resolve => setTimeout(resolve, 500));
+                waitCount++;
+                if (waitCount % 4 === 0) {  // Log every 2 seconds
+                    console.log(`[OfflineLLM] Still loading model... (${waitCount * 0.5}s)`);
+                }
+            }
+            
+            if (!modelLoaded) {
+                throw new Error('Model loading timeout - took too long');
             }
         }
         
