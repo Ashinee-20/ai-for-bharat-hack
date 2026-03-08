@@ -161,7 +161,15 @@ function toggleOfflineMode() {
         modeToggleButton.classList.add('offline');
         modeToggleText.textContent = '🔴 Offline';
         updateStatusIndicator('offline');
-        addMessage('🔴 Switched to offline mode. Using local TinyLlama model.', 'bot');
+        
+        // Show appropriate message based on model status
+        if (getModelStatus().loaded) {
+            addMessage('🔴 Switched to offline mode. Using local TinyLlama model.', 'bot');
+        } else if (getModelStatus().loading) {
+            addMessage('🔴 Switched to offline mode. ⏳ Model is loading... (this may take 15-25 seconds on first run)', 'bot');
+        } else {
+            addMessage('🔴 Switched to offline mode. ⏳ Starting model download...', 'bot');
+        }
         
         // Show model download popup ONLY if model not already downloaded
         modelDownloadManager.isModelDownloaded().then(isDownloaded => {
@@ -243,8 +251,24 @@ async function getLLMResponse(query) {
         // Try to use offline LLM model
         try {
             console.log('[FarmIntel] Running local TinyLlama model...');
+            
+            // Show loading message
+            if (getModelStatus().loading) {
+                addMessage('⏳ Model is still loading... Please wait a moment.', 'bot');
+            } else {
+                addMessage('⏳ Generating offline response...', 'bot');
+            }
+            
             const offlineLLMResponse = await generateOfflineLLMResponse(query);
             console.log('[FarmIntel] Offline LLM response generated');
+            
+            // Remove the loading message and replace with actual response
+            const messages = chatContainer.querySelectorAll('.message');
+            const lastMessage = messages[messages.length - 1];
+            if (lastMessage && lastMessage.textContent.includes('⏳')) {
+                lastMessage.remove();
+            }
+            
             return `<div>${offlineLLMResponse}</div>`;
         } catch (offlineError) {
             console.error('[FarmIntel] Offline LLM error:', offlineError);

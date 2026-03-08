@@ -75,8 +75,15 @@ async function loadOfflineModel() {
 async function generateOfflineLLMResponse(query) {
     try {
         if (!modelLoaded) {
-            console.log('[OfflineLLM] Model not loaded, loading now...');
-            await loadOfflineModel();
+            console.log('[OfflineLLM] Waiting for model to finish loading...');
+            while (!modelLoaded) {
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
+        }
+        
+        // Safety check - ensure engine is initialized
+        if (!engine) {
+            throw new Error("LLM engine not initialized yet");
         }
         
         console.log('[OfflineLLM] Generating response for query:', query);
