@@ -152,6 +152,12 @@ function toggleVoiceCall() {
 }
 
 function toggleOfflineMode() {
+    // Check if WebLLM is available
+    if (typeof window.webllm === 'undefined') {
+        addMessage('❌ Offline mode not available - WebLLM library failed to load from CDN. Please check your internet connection and refresh the page.', 'bot', true);
+        return;
+    }
+    
     forceOfflineMode = !forceOfflineMode;
     const modeToggleButton = document.getElementById('modeToggleButton');
     const modeToggleText = document.getElementById('modeToggleText');
@@ -247,6 +253,19 @@ async function getLLMResponse(query) {
         console.error('[FarmIntel] API call failed:', error.message);
         console.log('[FarmIntel] Switching to offline mode...');
         updateStatusIndicator('offline');
+        
+        // Check if WebLLM is available
+        if (typeof window.webllm === 'undefined') {
+            console.error('[FarmIntel] WebLLM not available, cannot use offline mode');
+            try {
+                const offlineResponse = getOfflineResponse(query);
+                return offlineResponse;
+            } catch (fallbackError) {
+                console.error('[FarmIntel] Fallback error:', fallbackError);
+                return `<p><strong>⚠️ Connection Error</strong></p>
+                        <p>Unable to reach the server and offline mode is not available. Please check your internet connection.</p>`;
+            }
+        }
         
         // Try to use offline LLM model
         try {

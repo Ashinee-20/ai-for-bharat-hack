@@ -95,8 +95,32 @@
     <script src="offline-manager.js"></script>
     <script src="model-download-manager.js"></script>
     
-    <!-- WebLLM Library - Official CDN (most stable) -->
-    <script src="https://unpkg.com/@mlc-ai/web-llm@0.2.46/dist/webllm.js"></script>
+    <!-- WebLLM Library - Using jsDelivr CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@mlc-ai/web-llm@0.2.46/dist/webllm.js"></script>
+    
+    <!-- Diagnostic script to verify WebLLM loaded -->
+    <script>
+        window.addEventListener('load', function() {
+            setTimeout(function() {
+                if (typeof window.webllm === 'undefined') {
+                    console.error('❌ WebLLM CDN failed to load');
+                    console.log('Trying alternative CDN...');
+                    // Try alternative CDN
+                    const script = document.createElement('script');
+                    script.src = 'https://unpkg.com/@mlc-ai/web-llm@0.2.46/dist/webllm.js';
+                    script.onload = function() {
+                        console.log('✅ Alternative CDN loaded successfully');
+                    };
+                    script.onerror = function() {
+                        console.error('❌ Both CDNs failed to load');
+                    };
+                    document.head.appendChild(script);
+                } else {
+                    console.log('✅ WebLLM loaded successfully from jsDelivr');
+                }
+            }, 1000);
+        });
+    </script>
     
     <script src="offline-llm.js"></script>
     <script src="app.js"></script>

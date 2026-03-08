@@ -182,19 +182,24 @@ function getModelStatus() {
 // Wait for WebLLM to load from CDN, then start preloading
 async function waitForWebLLM() {
     let attempts = 0;
+    const maxAttempts = 50;
     
-    while (typeof window.webllm === 'undefined' && attempts < 50) {
-        console.log(`[OfflineLLM] Waiting for WebLLM... (attempt ${attempts + 1})`);
+    console.log('[OfflineLLM] Checking for WebLLM availability...');
+    
+    while (typeof window.webllm === 'undefined' && attempts < maxAttempts) {
+        console.log(`[OfflineLLM] Waiting for WebLLM... (attempt ${attempts + 1}/${maxAttempts})`);
         await new Promise(resolve => setTimeout(resolve, 200));
         attempts++;
     }
     
     if (typeof window.webllm === 'undefined') {
-        console.error('[OfflineLLM] WebLLM failed to load from CDN');
+        console.error('[OfflineLLM] ❌ WebLLM failed to load from CDN after 10 seconds');
+        console.error('[OfflineLLM] This means the CDN is unreachable or blocked');
+        console.error('[OfflineLLM] Offline mode will not be available');
         return;
     }
     
-    console.log('[OfflineLLM] WebLLM detected, starting preload...');
+    console.log('[OfflineLLM] ✅ WebLLM detected, starting preload...');
     loadOfflineModel().catch(err => {
         console.log('[OfflineLLM] Preload failed (will retry on first query):', err.message);
     });
