@@ -252,24 +252,35 @@ async function getLLMResponse(query) {
         try {
             console.log('[FarmIntel] Running local TinyLlama model...');
             
-            // Show loading message
-            if (getModelStatus().loading) {
-                addMessage('⏳ Model is still loading... Please wait a moment.', 'bot');
-            } else {
-                addMessage('⏳ Generating offline response...', 'bot');
-            }
+            // Create a message element for streaming response
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message bot-message';
             
-            const offlineLLMResponse = await generateOfflineLLMResponse(query);
+            const avatarDiv = document.createElement('div');
+            avatarDiv.className = 'message-avatar';
+            avatarDiv.textContent = 'AI';
+            
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'message-content';
+            contentDiv.textContent = '';  // Start empty
+            
+            messageDiv.appendChild(avatarDiv);
+            messageDiv.appendChild(contentDiv);
+            chatContainer.appendChild(messageDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+            
+            // Stream tokens as they arrive
+            const offlineLLMResponse = await generateOfflineLLMResponse(query, (token) => {
+                contentDiv.textContent += token;
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+            });
+            
             console.log('[FarmIntel] Offline LLM response generated');
             
-            // Remove the loading message and replace with actual response
-            const messages = chatContainer.querySelectorAll('.message');
-            const lastMessage = messages[messages.length - 1];
-            if (lastMessage && lastMessage.textContent.includes('⏳')) {
-                lastMessage.remove();
-            }
+            // Save to chat history
+            saveChatHistory();
             
-            return `<div>${offlineLLMResponse}</div>`;
+            return '';  // Return empty since we already added the message
         } catch (offlineError) {
             console.error('[FarmIntel] Offline LLM error:', offlineError);
             console.log('[FarmIntel] Local model unavailable, using fallback responses');

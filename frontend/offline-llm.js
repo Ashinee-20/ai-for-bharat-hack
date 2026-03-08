@@ -70,9 +70,9 @@ async function loadOfflineModel() {
 }
 
 /**
- * Generate response using offline TinyLlama model
+ * Generate response using offline TinyLlama model with streaming
  */
-async function generateOfflineLLMResponse(query) {
+async function generateOfflineLLMResponse(query, onToken = null) {
     try {
         if (!modelLoaded) {
             console.log('[OfflineLLM] Waiting for model to finish loading...');
@@ -88,6 +88,9 @@ async function generateOfflineLLMResponse(query) {
         
         console.log('[OfflineLLM] Generating response for query:', query);
         
+        // Get conversation history for context
+        const conversationHistory = getConversationHistory();
+        
         // Create system prompt for agricultural context
         const systemPrompt = `You are FarmIntel, an agricultural intelligence assistant helping Indian farmers. 
 You provide practical, concise advice on:
@@ -99,26 +102,56 @@ You provide practical, concise advice on:
 - Fertilizer recommendations
 - Harvest and post-harvest handling
 
-Keep responses brief (2-3 sentences), practical, and specific to Indian agriculture.`;
+Keep responses VERY brief (1-2 sentences max), practical, and specific to Indian agriculture.
+Only provide as much information as needed to answer the question.`;
         
-        const response = await engine.chat.completions.create({
-            messages: [
-                { 
-                    role: 'system', 
-                    content: systemPrompt 
-                },
-                { 
-                    role: 'user', 
-                    content: query 
+        // Build messages array with conversation history
+        const messages = [
+            { 
+                role: 'system', 
+                content: systemPrompt 
+            },
+            ...conversationHistory,
+            { 
+                role: 'user', 
+                content: query 
+            }
+        ];
+        
+        // Use streaming if callback provided
+        if (onToken) {
+            console.log('[OfflineLLM] Using streaming mode');
+            let fullResponse = '';
+            
+            const stream = await engine.chat.completions.create({
+                messages: messages,
+                temperature: 0.7,
+                max_tokens: 80,
+                stream: true
+            });
+            
+            for await (const chunk of stream) {
+                if (chunk.choices[0].delta.content) {
+                    const token = chunk.choices[0].delta.content;
+                    fullResponse += token;
+                    onToken(token);  // Call callback with each token
                 }
-            ],
-            temperature: 0.7,
-            max_tokens: 150
-        });
-        
-        const content = response.choices[0].message.content;
-        console.log('[OfflineLLM] Response generated successfully');
-        return content;
+            }
+            
+            console.log('[OfflineLLM] Streaming response completed');
+            return fullResponse;
+        } else {
+            // Non-streaming mode (fallback)
+            const response = await engine.chat.completions.create({
+                messages: messages,
+                temperature: 0.7,
+                max_tokens: 80
+            });
+            
+            const content = response.choices[0].message.content;
+            console.log('[OfflineLLM] Response generated successfully');
+            return content;
+        }
         
     } catch (error) {
         console.error('[OfflineLLM] Error generating response:', error);
