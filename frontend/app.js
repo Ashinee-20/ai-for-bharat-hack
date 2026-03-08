@@ -423,25 +423,21 @@ function cacheResponseData(query, context) {
 
 function updateStatusIndicator(mode) {
     /**
-     * Update UI status indicator
+     * Update UI status indicator - now only updates the toggle button
      */
-    const header = document.querySelector('.app-header');
-    if (!header) return;
+    const modeToggleButton = document.getElementById('modeToggleButton');
+    const modeToggleText = document.getElementById('modeToggleText');
     
-    let indicator = document.getElementById('statusIndicator');
-    if (!indicator) {
-        indicator = document.createElement('div');
-        indicator.id = 'statusIndicator';
-        indicator.style.cssText = 'position: absolute; right: 100px; top: 50%; transform: translateY(-50%); font-size: 12px; padding: 4px 8px; border-radius: 4px; background: rgba(0,0,0,0.1);';
-        header.querySelector('.header-content').appendChild(indicator);
-    }
+    if (!modeToggleButton || !modeToggleText) return;
     
     if (mode === 'online') {
-        indicator.innerHTML = '🟢 Online';
-        indicator.style.color = '#10a37f';
+        modeToggleButton.classList.remove('offline');
+        modeToggleText.textContent = '🟢 Online';
+        modeToggleButton.title = 'Online mode - using cloud API';
     } else {
-        indicator.innerHTML = '🔴 Offline';
-        indicator.style.color = '#ef4444';
+        modeToggleButton.classList.add('offline');
+        modeToggleText.textContent = '🔴 Offline';
+        modeToggleButton.title = 'Offline mode - no internet connection';
     }
 }
 

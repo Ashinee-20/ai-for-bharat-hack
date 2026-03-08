@@ -133,6 +133,8 @@ body {
     cursor: pointer;
     transition: var(--transition);
     white-space: nowrap;
+    min-width: 90px;
+    text-align: center;
 }
 
 .mode-toggle-button:hover {
