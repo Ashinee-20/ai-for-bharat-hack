@@ -1,12 +1,12 @@
 /**
  * FarmIntel Offline LLM Manager
- * Runs TinyLlama 1.1B model locally in browser using WebLLM
+ * Runs Phi-2 model locally in browser using WebLLM
  * 
  * WebLLM loaded via CDN script tag in index.html
- * First load: ~20 seconds (model downloads from CDN)
+ * First load: ~30 seconds (model downloads from CDN)
  * Subsequent loads: Instant (cached in browser)
  * Inference time: 2-4 seconds per response
- * VRAM usage: ~300-500MB
+ * VRAM usage: ~400-600MB
  * 
  * Works best on: Chrome, Edge, Brave (with WebGPU support)
  */
@@ -14,6 +14,10 @@
 let engine = null;
 let modelLoaded = false;
 let modelLoading = false;
+
+// Log when script loads
+console.log('[OfflineLLM] Script loaded');
+console.log('[OfflineLLM] WebLLM available:', typeof window.webllm !== 'undefined');
 
 /**
  * Load the offline TinyLlama model
@@ -35,18 +39,18 @@ async function loadOfflineModel() {
     
     try {
         modelLoading = true;
-        console.log('[OfflineLLM] Loading TinyLlama offline model...');
+        console.log('[OfflineLLM] Loading Phi-2 offline model...');
         
         // Check if WebLLM is available
-        if (typeof webllm === 'undefined') {
+        if (typeof window.webllm === 'undefined') {
             throw new Error('WebLLM library not loaded. Make sure the CDN script is loaded.');
         }
         
         console.log('[OfflineLLM] WebLLM available, creating engine...');
         
-        // Create engine with TinyLlama model
-        engine = await webllm.CreateMLCEngine(
-            'TinyLlama-1.1B-Chat-v1.0-q4f16_1',
+        // Create engine with Phi-2 model (better for agriculture than TinyLlama)
+        engine = await window.webllm.CreateMLCEngine(
+            'Phi-2-q4f16_1',
             {
                 initProgressCallback: (progress) => {
                     console.log('[OfflineLLM] Model loading progress:', progress);
@@ -120,27 +124,23 @@ Keep responses brief (2-3 sentences), practical, and specific to Indian agricult
  */
 function getModelStatus() {
     return {
-        available: typeof webllm !== 'undefined',
+        available: typeof window.webllm !== 'undefined',
         loaded: modelLoaded,
         loading: modelLoading
     };
 }
 
-// Log when script loads
-console.log('[OfflineLLM] Script loaded');
-console.log('[OfflineLLM] WebLLM available:', typeof webllm !== 'undefined');
-
 // Wait for WebLLM to load from CDN, then start preloading
 async function waitForWebLLM() {
     let attempts = 0;
     
-    while (typeof webllm === 'undefined' && attempts < 50) {
+    while (typeof window.webllm === 'undefined' && attempts < 50) {
         console.log(`[OfflineLLM] Waiting for WebLLM... (attempt ${attempts + 1})`);
         await new Promise(resolve => setTimeout(resolve, 200));
         attempts++;
     }
     
-    if (typeof webllm === 'undefined') {
+    if (typeof window.webllm === 'undefined') {
         console.error('[OfflineLLM] WebLLM failed to load from CDN');
         return;
     }
