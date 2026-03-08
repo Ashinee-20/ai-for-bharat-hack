@@ -11,6 +11,7 @@ const loadingIndicator = document.getElementById('loadingIndicator');
 
 // State
 let isProcessing = false;
+let forceOfflineMode = false;
 
 // Initialize App
 document.addEventListener('DOMContentLoaded', async () => {
@@ -74,6 +75,12 @@ function initializeApp() {
 function setupEventListeners() {
     // Send button click
     sendButton.addEventListener('click', handleSendMessage);
+    
+    // Mode toggle button
+    const modeToggleButton = document.getElementById('modeToggleButton');
+    if (modeToggleButton) {
+        modeToggleButton.addEventListener('click', toggleOfflineMode);
+    }
     
     // Voice call button
     const voiceCallButton = document.getElementById('voiceCallButton');
@@ -144,8 +151,41 @@ function toggleVoiceCall() {
     console.log('Voice call activated - ElevenLabs widget should appear in bottom right corner');
 }
 
+function toggleOfflineMode() {
+    forceOfflineMode = !forceOfflineMode;
+    const modeToggleButton = document.getElementById('modeToggleButton');
+    const modeToggleText = document.getElementById('modeToggleText');
+    
+    if (forceOfflineMode) {
+        console.log('[FarmIntel] Switched to OFFLINE mode');
+        modeToggleButton.classList.add('offline');
+        modeToggleText.textContent = '🔴 Offline';
+        updateStatusIndicator('offline');
+        addMessage('🔴 Switched to offline mode. Using local TinyLlama model.', 'bot');
+        
+        // Show model download popup if model not loaded
+        if (!getModelStatus().loaded) {
+            console.log('[FarmIntel] Showing model download popup');
+            modelDownloadManager.showDownloadPopup();
+        }
+    } else {
+        console.log('[FarmIntel] Switched to ONLINE mode');
+        modeToggleButton.classList.remove('offline');
+        modeToggleText.textContent = '🟢 Online';
+        updateStatusIndicator('online');
+        addMessage('🟢 Switched to online mode. Using cloud API.', 'bot');
+    }
+}
+
 async function getLLMResponse(query) {
     try {
+        // If user forced offline mode, skip API and go straight to offline
+        if (forceOfflineMode) {
+            console.log('[FarmIntel] Forced offline mode - skipping API call');
+            updateStatusIndicator('offline');
+            throw new Error('Forced offline mode');
+        }
+        
         console.log('[FarmIntel] Attempting online API call...');
         
         const conversationHistory = getConversationHistory();
