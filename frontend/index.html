@@ -94,8 +94,12 @@
     <script src="offline-manager.js"></script>
     <script src="model-download-manager.js"></script>
     
-    <!-- WebLLM runtime - correct CDN path -->
-    <script src="https://cdn.jsdelivr.net/npm/@mlc-ai/web-llm@0.2.48/dist/webllm.js"></script>
+    <!-- WebLLM ES Module - exposes to window.webllm -->
+    <script type="module">
+        import * as webllm from "https://esm.run/@mlc-ai/web-llm";
+        window.webllm = webllm;
+        console.log("WebLLM module loaded");
+    </script>
     
     <script src="offline-llm.js"></script>
     <script src="app.js"></script>

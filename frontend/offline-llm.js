@@ -1,12 +1,12 @@
 /**
  * FarmIntel Offline LLM Manager
- * Runs Phi-2 model locally in browser using WebLLM
+ * Runs TinyLlama 1.1B model locally in browser using WebLLM
  * 
- * WebLLM loaded via CDN script tag in index.html
- * First load: ~30 seconds (model downloads from CDN)
+ * WebLLM loaded via ES module in index.html
+ * First load: ~20 seconds (model downloads from CDN)
  * Subsequent loads: Instant (cached in browser)
  * Inference time: 2-4 seconds per response
- * VRAM usage: ~400-600MB
+ * VRAM usage: ~350MB (optimized for mobile/rural)
  * 
  * Works best on: Chrome, Edge, Brave (with WebGPU support)
  */
@@ -39,7 +39,7 @@ async function loadOfflineModel() {
     
     try {
         modelLoading = true;
-        console.log('[OfflineLLM] Loading Phi-2 offline model...');
+        console.log('[OfflineLLM] Loading TinyLlama offline model...');
         
         // Check if WebLLM is available
         if (typeof window.webllm === 'undefined') {
@@ -48,9 +48,9 @@ async function loadOfflineModel() {
         
         console.log('[OfflineLLM] WebLLM available, creating engine...');
         
-        // Create engine with Phi-2 model (better for agriculture than TinyLlama)
+        // Create engine with TinyLlama model (optimized for mobile/rural)
         engine = await window.webllm.CreateMLCEngine(
-            'Phi-2-q4f16_1',
+            'TinyLlama-1.1B-Chat-v1.0-q4f16_1',
             {
                 initProgressCallback: (progress) => {
                     console.log('[OfflineLLM] Model loading progress:', progress);
