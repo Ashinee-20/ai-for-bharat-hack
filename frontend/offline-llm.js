@@ -50,7 +50,7 @@ async function loadOfflineModel() {
         
         // Create engine with TinyLlama model (optimized for mobile/rural)
         engine = await window.webllm.CreateMLCEngine(
-            'TinyLlama-1.1B-Chat-v1.0-q4f16_1',
+            'TinyLlama-1.1B-Chat-v1.0-q4f32_1-MLC',
             {
                 initProgressCallback: (progress) => {
                     console.log('[OfflineLLM] Model loading progress:', progress);
